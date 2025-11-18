@@ -65,55 +65,69 @@ export interface GameState {
 }
 
 // L-Block patterns (for detection) - 5-cell L-shapes
+type LBlockType = 'RFB' | 'LFB';
+const L_BLOCK_SIZES = [3, 4, 5, 6] as const;
+
+const rotatePattern = (cells: number[][], size: number): number[][] =>
+  cells.map(([row, col]) => [col, size - 1 - row]);
+
+const normalizePattern = (cells: number[][]): number[][] => {
+  const minRow = Math.min(...cells.map(([row]) => row));
+  const minCol = Math.min(...cells.map(([, col]) => col));
+  const normalized = cells.map(([row, col]) => [row - minRow, col - minCol]);
+  normalized.sort((a, b) => (a[0] - b[0]) || (a[1] - b[1]));
+  return normalized;
+};
+
+const patternKey = (cells: number[][]): string =>
+  cells.map(([row, col]) => `${row}:${col}`).join('|');
+
+const createBasePattern = (size: number, type: LBlockType): number[][] => {
+  const cells: number[][] = [];
+
+  if (type === 'RFB') {
+    for (let row = 0; row < size; row++) {
+      cells.push([row, 0]);
+    }
+    for (let col = 0; col < size; col++) {
+      cells.push([size - 1, col]);
+    }
+  } else {
+    for (let row = 0; row < size; row++) {
+      cells.push([row, size - 1]);
+    }
+    for (let col = 0; col < size; col++) {
+      cells.push([size - 1, col]);
+    }
+  }
+
+  return normalizePattern(cells);
+};
+
+const generateLPatterns = (type: LBlockType): number[][][] => {
+  const patterns: number[][][] = [];
+
+  L_BLOCK_SIZES.forEach((size) => {
+    let current = createBasePattern(size, type);
+    const seen = new Set<string>();
+
+    for (let i = 0; i < 4; i++) {
+      const normalized = normalizePattern(current);
+      const key = patternKey(normalized);
+      if (!seen.has(key)) {
+        seen.add(key);
+        patterns.push(normalized);
+      }
+      current = rotatePattern(current, size);
+    }
+  });
+
+  return patterns;
+};
+
 export const L_PATTERNS = {
-  // Right-facing L (⅃) - 5 cells
-  // Pattern: 4 cells vertical + 1 cell horizontal base on right
-  RFB: [
-    // Standard (vertical long leg with horizontal base on right, pointing down-right)
-    // X
-    // X
-    // X
-    // X X
-    [[0, 0], [1, 0], [2, 0], [3, 0], [3, 1]],
-    // Rotated 90° clockwise (horizontal leg with base on bottom, pointing right-down)
-    // X X X X
-    //       X
-    [[0, 0], [0, 1], [0, 2], [0, 3], [1, 3]],
-    // Rotated 180° clockwise (vertical leg with base on left at top, pointing up-right)
-    // X X
-    //   X
-    //   X
-    //   X
-    [[0, 0], [0, 1], [1, 1], [2, 1], [3, 1]],
-    // Rotated 270° clockwise (horizontal leg with base on top, pointing left-up)
-    //       X
-    // X X X X
-    [[0, 3], [1, 0], [1, 1], [1, 2], [1, 3]],
-  ],
-  // Left-facing L (L) - 5 cells
-  // Pattern: 4 cells vertical + 1 cell horizontal base on left
-  LFB: [
-    // Standard (vertical long leg with horizontal base on left, pointing down-left)
-    //   X
-    //   X
-    //   X
-    // X X
-    [[0, 1], [1, 1], [2, 1], [3, 1], [3, 0]],
-    // Rotated 90° clockwise (horizontal leg with base on bottom, pointing left-down)
-    // X
-    // X X X X
-    [[0, 0], [1, 0], [1, 1], [1, 2], [1, 3]],
-    // Rotated 180° clockwise (vertical leg with base on right at top, pointing up-left)
-    //     X
-    //     X
-    //     X
-    //   X X
-    [[0, 0], [1, 0], [2, 0], [3, 0], [3, 1]],
-    // Rotated 270° clockwise (horizontal leg with base on top, pointing right-up)
-    // X X X X
-    // X
-    [[0, 0], [0, 1], [0, 2], [0, 3], [1, 0]],
-  ],
+  RFB: generateLPatterns('RFB'),
+  LFB: generateLPatterns('LFB'),
 };
 
 // Standard Tetris pieces

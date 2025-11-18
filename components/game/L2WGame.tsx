@@ -1,6 +1,5 @@
 import { GAME_COLORS, GamePhase, GRID_SIZE, L_PATTERNS, Piece, SCORES } from '@/constants/game';
 import {
-  applyGravity,
   canPlacePiece,
   createEmptyGrid,
   detectLBlocks,
@@ -156,7 +155,6 @@ export default function L2WGame() {
               rfbBlocks.forEach((cells) => {
                 updatedGrid = removeCells(updatedGrid, cells);
               });
-              updatedGrid = applyGravity(updatedGrid);
               totalRFBs += rfbBlocks.length;
               totalScore += SCORES.RFB * rfbBlocks.length;
               hasChanges = true;
@@ -168,7 +166,6 @@ export default function L2WGame() {
               lfbBlocks.forEach((cells) => {
                 updatedGrid = removeCells(updatedGrid, cells);
               });
-              updatedGrid = applyGravity(updatedGrid);
               totalLFBs += lfbBlocks.length;
               totalScore += SCORES.LFB * lfbBlocks.length;
               hasChanges = true;
