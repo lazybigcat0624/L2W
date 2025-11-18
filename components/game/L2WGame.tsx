@@ -61,6 +61,16 @@ export default function L2WGame() {
 
   const fallIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastSwipeRef = useRef<{ direction: 'left' | 'right' | 'down'; time: number } | null>(null);
+  const gridRef = useRef(grid);
+  const currentPieceRef = useRef<Piece | null>(currentPiece);
+
+  useEffect(() => {
+    gridRef.current = grid;
+  }, [grid]);
+
+  useEffect(() => {
+    currentPieceRef.current = currentPiece;
+  }, [currentPiece]);
 
   // Keyboard support for web
   useEffect(() => {
@@ -117,81 +127,76 @@ export default function L2WGame() {
 
   // Part A: Handle piece falling
   useEffect(() => {
-    if (phase === 'partA' && gameStarted && currentPiece) {
+    if (phase === 'partA' && gameStarted) {
       fallIntervalRef.current = setInterval(() => {
         setCurrentPiece((prev) => {
-          if (!prev) return null;
-          const testPiece = { ...prev, y: prev.y + 1 };
-          if (canPlacePiece(grid, testPiece)) {
+          const activePiece = prev ?? currentPieceRef.current;
+          if (!activePiece) return null;
+          const activeGrid = gridRef.current;
+
+          const testPiece = { ...activePiece, y: activePiece.y + 1 };
+          if (canPlacePiece(activeGrid, testPiece)) {
             return testPiece;
-          } else {
-            // Piece can't fall, place it
-            let updatedGrid = placePiece(grid, prev);
-            setGrid(updatedGrid);
-            
-            // Process L-block removal with gravity and cascading
-            let totalRFBs = 0;
-            let totalLFBs = 0;
-            let totalScore = 0;
-            let hasChanges = true;
-            
-            // Keep processing until no more L-blocks are found
-            while (hasChanges) {
-              hasChanges = false;
-              
-              // Check for L-blocks (RFB first)
-              const rfbBlocks = detectLBlocks(updatedGrid, L_PATTERNS.RFB);
-              if (rfbBlocks.length > 0) {
-                rfbBlocks.forEach((cells) => {
-                  updatedGrid = removeCells(updatedGrid, cells);
-                });
-                updatedGrid = applyGravity(updatedGrid);
-                totalRFBs += rfbBlocks.length;
-                totalScore += SCORES.RFB * rfbBlocks.length;
-                hasChanges = true;
-                setGrid(updatedGrid); // Update grid with visual feedback
-              }
-              
-              // Check for L-blocks (LFB after RFB removal)
-              const lfbBlocks = detectLBlocks(updatedGrid, L_PATTERNS.LFB);
-              if (lfbBlocks.length > 0) {
-                lfbBlocks.forEach((cells) => {
-                  updatedGrid = removeCells(updatedGrid, cells);
-                });
-                updatedGrid = applyGravity(updatedGrid);
-                totalLFBs += lfbBlocks.length;
-                totalScore += SCORES.LFB * lfbBlocks.length;
-                hasChanges = true;
-                setGrid(updatedGrid); // Update grid with visual feedback
-              }
-            }
-            
-            // Update counts and score
-            if (totalRFBs > 0) {
-              setRfbCount((prev) => prev + totalRFBs);
-            }
-            if (totalLFBs > 0) {
-              setLfbCount((prev) => prev + totalLFBs);
-            }
-            if (totalScore > 0) {
-              setScore((prev) => prev + totalScore);
-            }
-            
-            // Final grid update
-            setGrid(updatedGrid);
-            
-            // Check if grid is full
-            if (isGridFullToTop(updatedGrid)) {
-              setPhase('transitionAB');
-              setGameStarted(false);
-              return null;
-            }
-            
-            // Generate next piece
-            const next = generateRandomPiece();
-            setNextPiece(next);
-            return next;
           }
+
+          // Piece can't fall, place it
+          let updatedGrid = placePiece(activeGrid, activePiece);
+          setGrid(updatedGrid);
+
+          let totalRFBs = 0;
+          let totalLFBs = 0;
+          let totalScore = 0;
+          let hasChanges = true;
+
+          while (hasChanges) {
+            hasChanges = false;
+
+            const rfbBlocks = detectLBlocks(updatedGrid, L_PATTERNS.RFB);
+            if (rfbBlocks.length > 0) {
+              rfbBlocks.forEach((cells) => {
+                updatedGrid = removeCells(updatedGrid, cells);
+              });
+              updatedGrid = applyGravity(updatedGrid);
+              totalRFBs += rfbBlocks.length;
+              totalScore += SCORES.RFB * rfbBlocks.length;
+              hasChanges = true;
+              setGrid(updatedGrid);
+            }
+
+            const lfbBlocks = detectLBlocks(updatedGrid, L_PATTERNS.LFB);
+            if (lfbBlocks.length > 0) {
+              lfbBlocks.forEach((cells) => {
+                updatedGrid = removeCells(updatedGrid, cells);
+              });
+              updatedGrid = applyGravity(updatedGrid);
+              totalLFBs += lfbBlocks.length;
+              totalScore += SCORES.LFB * lfbBlocks.length;
+              hasChanges = true;
+              setGrid(updatedGrid);
+            }
+          }
+
+          if (totalRFBs > 0) {
+            setRfbCount((prevCount) => prevCount + totalRFBs);
+          }
+          if (totalLFBs > 0) {
+            setLfbCount((prevCount) => prevCount + totalLFBs);
+          }
+          if (totalScore > 0) {
+            setScore((prevScore) => prevScore + totalScore);
+          }
+
+          setGrid(updatedGrid);
+
+          if (isGridFullToTop(updatedGrid)) {
+            setPhase('transitionAB');
+            setGameStarted(false);
+            return null;
+          }
+
+          const next = generateRandomPiece();
+          setNextPiece(next);
+          return next;
         });
       }, FALL_INTERVAL);
     } else {
@@ -206,7 +211,7 @@ export default function L2WGame() {
         clearInterval(fallIntervalRef.current);
       }
     };
-  }, [phase, gameStarted, currentPiece, grid]);
+  }, [phase, gameStarted]);
 
   // Handle tap to rotate (Part A) or rotate dragging block (Part B)
   const handleTap = useCallback(() => {
