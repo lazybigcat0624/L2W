@@ -1,8 +1,8 @@
-import { GRID_SIZE, PIECE_SHAPES, PIECE_COLORS, L_PATTERNS, Piece, PieceShape } from '@/constants/game';
+import { GRID_SIZE, Piece, PIECE_COLORS, PIECE_SHAPES, PieceShape } from '@/constants/game';
 
 // Generate random piece
 export function generateRandomPiece(): Piece {
-  const shapes: PieceShape[] = ['I', 'O', 'T', 'S', 'Z', 'L', 'J'];
+  const shapes: PieceShape[] = ['I', 'O', 'T', 'S', 'Z', 'L', 'J', 'C', 'P'];
   const shape = shapes[Math.floor(Math.random() * shapes.length)];
   const colorIndex = Math.floor(Math.random() * PIECE_COLORS.length);
   

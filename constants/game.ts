@@ -31,7 +31,7 @@ export const PIECE_COLORS = [
 ];
 
 // Tetris-like piece shapes
-export type PieceShape = 'I' | 'O' | 'T' | 'S' | 'Z' | 'L' | 'J';
+export type PieceShape = 'I' | 'O' | 'T' | 'S' | 'Z' | 'L' | 'J' | 'C' | 'P';
 
 export interface Piece {
   shape: PieceShape;
@@ -144,6 +144,16 @@ export const PIECE_SHAPES: Record<PieceShape, number[][]> = {
     [0, 1],
     [0, 1],
     [1, 1],
+  ],
+  C: [
+    [1, 1, 1],
+    [1, 0, 0],
+    [1, 1, 1],
+  ],
+  P: [
+    [1, 1, 1],
+    [1, 1, 0],
+    [1, 0, 0],
   ],
 };
 

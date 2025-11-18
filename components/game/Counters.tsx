@@ -22,7 +22,7 @@ export default function Counters({ rfbCount, lfbCount, wCount }: CountersProps) 
         <Text style={[styles.number, { color: GAME_COLORS.lCounter, fontSize: numberSize }]}>{rfbCount}</Text>
       </View>
       <View style={styles.counter}>
-        <Text style={[styles.letter, { color: GAME_COLORS.jCounter, fontSize: letterSize }]}>J</Text>
+        <Text style={[styles.letter, { color: GAME_COLORS.jCounter, fontSize: letterSize }]}>⅃</Text>
         <Text style={[styles.number, { color: GAME_COLORS.jCounter, fontSize: numberSize }]}>{lfbCount}</Text>
       </View>
       <View style={styles.counter}>
