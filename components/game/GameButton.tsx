@@ -1,6 +1,6 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, useWindowDimensions } from 'react-native';
-import { GAME_COLORS } from '@/constants/game';
+import { Text, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { gameStyles } from '../../styles/styles';
 
 interface GameButtonProps {
   title: string;
@@ -18,33 +18,15 @@ export default function GameButton({ title, onPress, disabled }: GameButtonProps
   return (
     <TouchableOpacity
       style={[
-        styles.button,
+        gameStyles.button,
         { paddingHorizontal, paddingVertical },
-        disabled && styles.buttonDisabled
+        disabled && gameStyles.buttonDisabled,
       ]}
       onPress={onPress}
       disabled={disabled}
     >
-      <Text style={[styles.buttonText, { fontSize }]}>{title}</Text>
+      <Text style={[gameStyles.buttonText, { fontSize }]}>{title}</Text>
     </TouchableOpacity>
   );
 }
-
-const styles = StyleSheet.create({
-  button: {
-    backgroundColor: GAME_COLORS.startButton,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 10,
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  buttonText: {
-    fontWeight: 'bold',
-    color: GAME_COLORS.background,
-    textTransform: 'uppercase',
-  },
-});
 

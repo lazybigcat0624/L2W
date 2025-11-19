@@ -1,7 +1,7 @@
-import { GAME_COLORS } from '@/constants/game';
 import React from 'react';
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { gameStyles } from '../../styles/styles';
 
 interface GameHeaderProps {
   score: number;
@@ -18,53 +18,16 @@ export default function GameHeader({ score, level }: GameHeaderProps) {
   const infoSize = isVerySmall ? 12 : isSmallScreen ? 14 : 18;
   
   return (
-    <View style={[styles.header, { paddingTop: Math.max(insets.top, 8) }]}>
-      <View style={styles.titleContainer}>
-        <Text style={[styles.title, { fontSize: titleSize }]}>L2W</Text>
-        <Text style={[styles.subtitle, { fontSize: subtitleSize }]}>Learn to Win</Text>
+    <View style={[gameStyles.header, { paddingTop: Math.max(insets.top, 8) }]}>
+      <View style={gameStyles.titleContainer}>
+        <Text style={[gameStyles.title, { fontSize: titleSize }]}>L2W</Text>
+        <Text style={[gameStyles.subtitle, { fontSize: subtitleSize }]}>Learn to Win</Text>
       </View>
-      <View style={styles.infoContainer}>
-        <Text style={[styles.score, { fontSize: infoSize }]}>Score: {score}</Text>
-        <Text style={[styles.level, { fontSize: infoSize }]}>Level: {level}</Text>
+      <View style={gameStyles.infoContainer}>
+        <Text style={[gameStyles.score, { fontSize: infoSize }]}>Score: {score}</Text>
+        <Text style={[gameStyles.level, { fontSize: infoSize }]}>Level: {level}</Text>
       </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    backgroundColor: GAME_COLORS.background,
-    flexWrap: 'wrap',
-  },
-  titleContainer: {
-    flex: 1,
-    minWidth: 120,
-  },
-  title: {
-    fontWeight: 'bold',
-    color: GAME_COLORS.title,
-  },
-  subtitle: {
-    color: GAME_COLORS.subtitle,
-  },
-  infoContainer: {
-    flexDirection: 'row',
-    gap: 8,
-    flexWrap: 'wrap',
-    alignItems: 'center',
-  },
-  score: {
-    fontWeight: 'bold',
-    color: GAME_COLORS.score,
-  },
-  level: {
-    fontWeight: 'bold',
-    color: GAME_COLORS.score,
-  },
-});
 
