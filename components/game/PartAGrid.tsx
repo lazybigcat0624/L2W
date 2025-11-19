@@ -53,8 +53,8 @@ export default function PartAGrid({ grid, currentPiece }: PartAGridProps) {
           {
             width: cellSize,
             height: cellSize,
-            backgroundColor: cellColor,
-            borderColor: borderColor,
+            backgroundColor: GAME_COLORS.background,
+            borderColor: GAME_COLORS.gridLineFaded,
           },
         ]}
       />

@@ -17,6 +17,7 @@ export const GAME_COLORS = {
   failForward: '#00FF00', // Green
   doIt: '#00FF00', // Bright Green
   gridLine: '#FFFFFF',
+  gridLineFaded: 'rgba(255, 255, 255, 0.2)',
 };
 
 // Piece colors (7 distinct colors)

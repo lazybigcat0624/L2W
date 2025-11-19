@@ -9,15 +9,7 @@ import {
   removeCells,
   rotatePiece,
 } from '@/utils/gameLogic';
-import {
-  canFormMoreWBlocks,
-  canPlaceLBlock,
-  detectWBlocks,
-  L_BLOCK_SHAPES,
-  placeLBlock,
-  removeWBlocks,
-  rotateLBlock,
-} from '@/utils/partBLogic';
+
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   GestureResponderEvent,
@@ -35,6 +27,7 @@ import GameButton from './GameButton';
 import GameHeader from './GameHeader';
 import PartAGrid from './PartAGrid';
 // import PartBGrid from './PartBGrid';
+import PartBGrid from './PartBGrid';
 import TransitionMessage from './TransitionMessage';
 
 const FALL_INTERVAL = 1000; // 1 second per fall
@@ -44,7 +37,7 @@ const SWIPE_COOLDOWN_MS = 120;
 
 export default function L2WGame() {
   const { width } = useWindowDimensions();
-  const [phase, setPhase] = useState<GamePhase>('idle');
+  const [phase, setPhase] = useState<GamePhase>('partB');
   const [score, setScore] = useState(0);
   const [level, setLevel] = useState(1);
   const [rfbCount, setRfbCount] = useState(0);
@@ -362,11 +355,9 @@ export default function L2WGame() {
         </View>
       ) : (
         <View style={styles.gameArea}>
-          {/* <PartBGrid
-            grid={partBGrid}
-            // onPlaceLBlock={handlePlaceLBlock}
-            draggingPiece={draggingPiece}
-          /> */}
+          <PartBGrid
+            
+          />
         </View>
       )}
       
