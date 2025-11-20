@@ -187,5 +187,30 @@ export const gameStyles = StyleSheet.create({
   doIt: {
     color: GAME_COLORS.doIt,
   },
+
+  // PartBGrid micro control buttons
+  microControlContainer: {
+    position: 'absolute',
+    bottom: 100,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    maxWidth: 200,
+  },
+  microControlButton: {
+    width: 40,
+    height: 40,
+    backgroundColor: GAME_COLORS.title,
+    borderRadius: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    margin: 4,
+  },
+  microControlButtonText: {
+    color: GAME_COLORS.background,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });
 

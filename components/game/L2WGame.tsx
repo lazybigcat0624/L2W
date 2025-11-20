@@ -79,6 +79,34 @@ export default function L2WGame() {
   }, []);
 
   /**
+   * Handles W count updates from Part B
+   */
+  const handleWCountChange = useCallback((delta: number) => {
+    setWCount((prev) => prev + delta);
+  }, []);
+
+  /**
+   * Handles RFB count updates from Part B (when placing blocks)
+   */
+  const handlePartBRfbCountChange = useCallback((delta: number) => {
+    setRfbCount((prev) => Math.max(0, prev + delta));
+  }, []);
+
+  /**
+   * Handles LFB count updates from Part B (when placing blocks)
+   */
+  const handlePartBLfbCountChange = useCallback((delta: number) => {
+    setLfbCount((prev) => Math.max(0, prev + delta));
+  }, []);
+
+  /**
+   * Handles Part B end
+   */
+  const handlePartBEnd = useCallback(() => {
+    setPhase('complete');
+  }, []);
+
+  /**
    * Determines if Part A phase is active or transitioning
    */
   const isPartAPhase = useMemo(
@@ -132,6 +160,10 @@ export default function L2WGame() {
             lfbCount={lfbCount}
             wCount={wCount}
             onGridChange={setPartBGrid}
+            onWCountChange={handleWCountChange}
+            onRfbCountChange={handlePartBRfbCountChange}
+            onLfbCountChange={handlePartBLfbCountChange}
+            onPartBEnd={handlePartBEnd}
           />
         )}
       </View>
