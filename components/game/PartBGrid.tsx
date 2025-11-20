@@ -1,4 +1,4 @@
-import { GAME_COLORS, GRID_SIZE } from '@/constants/game';
+import { GAME_COLORS, GRID_SIZE, SCORES } from '@/constants/game';
 import { createEmptyGrid } from '@/utils/gameLogic';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -25,6 +25,7 @@ interface PartBGridProps {
   onWCountChange?: (delta: number) => void;
   onRfbCountChange?: (delta: number) => void;
   onLfbCountChange?: (delta: number) => void;
+  onScoreChange?: (delta: number) => void;
   onPartBEnd?: () => void;
 }
 
@@ -73,7 +74,6 @@ const BLOCK_SHAPES: Record<BlockType, number[][]> = {
     [1, 0],
     [2, 0],
     [2, 1],
-    [2, 2],
   ],
   LFB: [
     [0, 2],
@@ -104,6 +104,65 @@ const rotatePattern = (pattern: number[][], rotation: PieceRotation): number[][]
 
 const getRotatedPattern = (type: BlockType, rotation: PieceRotation) =>
   rotatePattern(BLOCK_SHAPES[type], rotation);
+
+// Generate W patterns from actual BLOCK_SHAPES used in Part B
+const generateWPatterns = (): number[][][] => {
+  const patterns: number[][][] = [];
+  const seen = new Set<string>();
+
+  // W-block pattern consists of:
+  // RFB: [0,0], [1,0], [2,0], [2,1] (4 cells - right-facing L)
+  // LFB positioned to form W: [2,2], [3,2], [4,2], [4,3], [4,4] (5 cells - left-facing L)
+  // Total: 9 cells (no overlap)
+  const wBase: number[][] = [
+    // RFB cells
+    [0, 0],
+    [1, 0],
+    [2, 0],
+    [2, 1],
+    // LFB cells in W formation
+    [2, 2],
+    [3, 2],
+    [4, 2],
+    [4, 3],
+    [4, 4],
+  ];
+
+  // Remove duplicates and normalize
+  const uniqueMap = new Map<string, [number, number]>();
+  wBase.forEach(([row, col]) => {
+    uniqueMap.set(`${row}:${col}`, [row, col]);
+  });
+  let current = Array.from(uniqueMap.values());
+
+  // Generate all 4 rotations
+  for (let i = 0; i < 4; i += 1) {
+    // Normalize
+    const minRow = Math.min(...current.map(([r]) => r));
+    const minCol = Math.min(...current.map(([, c]) => c));
+    const normalized = current
+      .map(([r, c]) => [r - minRow, c - minCol] as [number, number])
+      .sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+
+    const key = normalized.map(([r, c]) => `${r}:${c}`).join('|');
+    if (!seen.has(key)) {
+      seen.add(key);
+      patterns.push(normalized);
+    }
+
+    // Rotate for next iteration - need to find bounding box for rotation
+    if (i < 3) {
+      const maxRow = Math.max(...current.map(([r]) => r));
+      const maxCol = Math.max(...current.map(([, c]) => c));
+      const size = Math.max(maxRow, maxCol) + 1;
+      current = current.map(([row, col]) => [col, size - 1 - row]);
+    }
+  }
+
+  return patterns;
+};
+
+const W_PATTERNS = generateWPatterns();
 
 const buildGridFromPieces = (pieces: PieceState[]) => {
   const grid = createEmptyGrid();
@@ -137,6 +196,8 @@ export default function PartBGrid({
   onGridChange,
   onRfbCountChange,
   onLfbCountChange,
+  onWCountChange,
+  onScoreChange,
 }: PartBGridProps) {
   const { width } = useWindowDimensions();
   const [pieces, setPieces] = useState<PieceState[]>([]);
@@ -250,6 +311,85 @@ export default function PartBGrid({
     []
   );
 
+  const detectWBlock = useCallback(
+    (piecesList: PieceState[]): { rfbId: string; lfbId: string } | null => {
+      const rfbPieces = piecesList.filter((p) => p.type === 'RFB');
+      const lfbPieces = piecesList.filter((p) => p.type === 'LFB');
+
+      for (const rfbPiece of rfbPieces) {
+        for (const lfbPiece of lfbPieces) {
+          const rfbCells = getPieceCells(rfbPiece);
+          const lfbCells = getPieceCells(lfbPiece);
+
+          // Combine cells from both pieces (remove duplicates)
+          const uniqueCellsMap = new Map<string, { row: number; col: number }>();
+          [...rfbCells, ...lfbCells].forEach((cell) => {
+            uniqueCellsMap.set(`${cell.row}:${cell.col}`, cell);
+          });
+          const uniqueCells = Array.from(uniqueCellsMap.values());
+
+          // W-block should have 9 cells total (4 from RFB + 5 from LFB, no overlap in correct W formation)
+          if (uniqueCells.length !== 9) {
+            continue;
+          }
+
+          // Normalize the combined cells (subtract min row/col)
+          const minRow = Math.min(...uniqueCells.map((c) => c.row));
+          const minCol = Math.min(...uniqueCells.map((c) => c.col));
+          const normalized = uniqueCells
+            .map((c) => [c.row - minRow, c.col - minCol] as [number, number])
+            .sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+
+          // Check if normalized cells match any W pattern
+          for (const wPattern of W_PATTERNS) {
+            const normalizedPattern = [...wPattern].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+
+            // Compare normalized patterns
+            if (
+              normalized.length === normalizedPattern.length &&
+              normalized.every(
+                (cell, idx) =>
+                  cell[0] === normalizedPattern[idx][0] && cell[1] === normalizedPattern[idx][1]
+              )
+            ) {
+              return { rfbId: rfbPiece.id, lfbId: lfbPiece.id };
+            }
+          }
+        }
+      }
+
+      return null;
+    },
+    [getPieceCells]
+  );
+
+  // Continuously check for W-block formations after pieces change
+  useEffect(() => {
+    if (pieces.length < 2) {
+      return;
+    }
+
+    const wBlock = detectWBlock(pieces);
+    if (wBlock) {
+      setPieces((prev) => {
+        // Avoid infinite loop - only remove if pieces still exist
+        const rfbExists = prev.some((p) => p.id === wBlock.rfbId);
+        const lfbExists = prev.some((p) => p.id === wBlock.lfbId);
+        
+        if (rfbExists && lfbExists) {
+          const filtered = prev.filter(
+            (p) => p.id !== wBlock.rfbId && p.id !== wBlock.lfbId
+          );
+          onWCountChange?.(1);
+          onScoreChange?.(SCORES.W_BLOCK);
+          return filtered;
+        }
+        
+        return prev;
+      });
+    }
+  }, [pieces, detectWBlock, onWCountChange, onScoreChange]);
+
   const blockingCellSet = useMemo(() => {
     const set = new Set<string>();
 
@@ -343,16 +483,33 @@ export default function PartBGrid({
           onLfbCountChange?.(-1);
         }
 
-        return [...prev, candidate];
+        const updatedPieces = [...prev, candidate];
+
+        // Check for W-block formation
+        const wBlock = detectWBlock(updatedPieces);
+        if (wBlock) {
+          // Remove both pieces that form the W-block
+          const filtered = updatedPieces.filter(
+            (p) => p.id !== wBlock.rfbId && p.id !== wBlock.lfbId
+          );
+          onWCountChange?.(1);
+          onScoreChange?.(SCORES.W_BLOCK);
+          return filtered;
+        }
+
+        return updatedPieces;
       });
 
       return placed;
     },
     [
       clearConflict,
+      detectWBlock,
       getNextPieceId,
       onLfbCountChange,
       onRfbCountChange,
+      onScoreChange,
+      onWCountChange,
       setConflictState,
       validatePlacement,
     ]
@@ -382,6 +539,19 @@ export default function PartBGrid({
         updated[index] = candidate;
         moved = true;
         clearConflict();
+
+        // Check for W-block formation
+        const wBlock = detectWBlock(updated);
+        if (wBlock) {
+          // Remove both pieces that form the W-block
+          const filtered = updated.filter(
+            (p) => p.id !== wBlock.rfbId && p.id !== wBlock.lfbId
+          );
+          onWCountChange?.(1);
+          onScoreChange?.(SCORES.W_BLOCK);
+          return filtered;
+        }
+
         return updated;
       });
 
@@ -392,7 +562,7 @@ export default function PartBGrid({
       setHiddenPieceId(null);
       return true;
     },
-    [clearConflict, setConflictState, validatePlacement]
+    [clearConflict, detectWBlock, onScoreChange, onWCountChange, setConflictState, validatePlacement]
   );
 
   const rotatePiece = useCallback(

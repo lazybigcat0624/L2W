@@ -163,6 +163,7 @@ export default function L2WGame() {
             onWCountChange={handleWCountChange}
             onRfbCountChange={handlePartBRfbCountChange}
             onLfbCountChange={handlePartBLfbCountChange}
+            onScoreChange={handleScoreChange}
             onPartBEnd={handlePartBEnd}
           />
         )}

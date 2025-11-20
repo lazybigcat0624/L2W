@@ -46,7 +46,7 @@ export interface Piece {
 export const SCORES = {
   RFB: 100, // Right-Facing Block
   LFB: 150, // Left-Facing Block
-  W_BLOCK: 200, // W-Block
+  W_BLOCK: 600, // W-Block
 };
 
 // Game states
@@ -130,10 +130,37 @@ const generateLPatterns = (type: LBlockType): number[][][] => {
   return patterns;
 };
 
+const createWBasePattern = (size: number): number[][] => {
+  const rightFacing = createBasePattern(size, 'RFB');
+  const leftFacing = createBasePattern(size, 'LFB');
+  return normalizePattern([...rightFacing, ...leftFacing]);
+};
+
+const generateWPatterns = (): number[][][] => {
+  const size = L_BLOCK_SIZES[0];
+  const patterns: number[][][] = [];
+  const seen = new Set<string>();
+  let current = createWBasePattern(size);
+
+  for (let i = 0; i < 4; i += 1) {
+    const normalized = normalizePattern(current);
+    const key = patternKey(normalized);
+    if (!seen.has(key)) {
+      seen.add(key);
+      patterns.push(normalized);
+    }
+    current = rotatePattern(current, size);
+  }
+
+  return patterns;
+};
+
 export const L_PATTERNS = {
   RFB: generateLPatterns('RFB'),
   LFB: generateLPatterns('LFB'),
 };
+
+export const W_PATTERNS = generateWPatterns();
 
 // Standard Tetris pieces
 export const PIECE_SHAPES: Record<PieceShape, number[][]> = {

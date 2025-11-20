@@ -1,4 +1,12 @@
-import { GAME_COLORS, GRID_SIZE, GamePhase, L_PATTERNS, PIECE_COLORS, Piece, SCORES } from '@/constants/game';
+import {
+  GAME_COLORS,
+  GRID_SIZE,
+  GamePhase,
+  L_PATTERNS,
+  PIECE_COLORS,
+  Piece,
+  SCORES,
+} from '@/constants/game';
 import {
   canPlacePiece,
   createEmptyGrid,
@@ -76,9 +84,9 @@ export default function PartAGrid({
   onGridChange,
   onCurrentPieceChange,
   onScoreChange,
-  onRfbCountChange,
-  onLfbCountChange,
-  onPhaseChange,
+    onRfbCountChange,
+    onLfbCountChange,
+    onPhaseChange,
   onGameStartedChange,
   onStartPartA,
   onTransition,
@@ -288,7 +296,16 @@ export default function PartAGrid({
         clearInterval(fallIntervalRef.current);
       }
     };
-  }, [phase, gameStarted, processLBlockRemoval, onPhaseChange, onGameStartedChange, onScoreChange, onRfbCountChange, onLfbCountChange]);
+  }, [
+    phase,
+    gameStarted,
+    processLBlockRemoval,
+    onPhaseChange,
+    onGameStartedChange,
+    onScoreChange,
+    onRfbCountChange,
+    onLfbCountChange,
+  ]);
 
   /**
    * Handles tap gesture - rotates piece in Part A
