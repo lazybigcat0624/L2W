@@ -35,11 +35,27 @@ interface CounterSizes {
 }
 
 type BlockType = 'RFB' | 'LFB';
+type PieceRotation = 0 | 90 | 180 | 270;
+
+interface PieceState {
+  id: string;
+  type: BlockType;
+  rotation: PieceRotation;
+  anchorRow: number;
+  anchorCol: number;
+}
+
+type DragSource = 'counter' | 'board';
 
 interface DragState {
+  source: DragSource;
   type: BlockType;
+  rotation: PieceRotation;
   x: number;
   y: number;
+  offsetRow: number;
+  offsetCol: number;
+  pieceId?: string;
 }
 
 interface GridBounds {
@@ -68,6 +84,52 @@ const BLOCK_SHAPES: Record<BlockType, number[][]> = {
   ],
 };
 
+const ROTATIONS: PieceRotation[] = [0, 90, 180, 270];
+const MOVE_THRESHOLD_PX = 6;
+
+const rotatePattern = (pattern: number[][], rotation: PieceRotation): number[][] => {
+  if (rotation === 0) {
+    return pattern;
+  }
+
+  let rotated = pattern;
+  const steps = rotation / 90;
+
+  for (let i = 0; i < steps; i += 1) {
+    rotated = rotated.map(([row, col]) => [col, BLOCK_DIMENSION - 1 - row]);
+  }
+
+  return rotated;
+};
+
+const getRotatedPattern = (type: BlockType, rotation: PieceRotation) =>
+  rotatePattern(BLOCK_SHAPES[type], rotation);
+
+const buildGridFromPieces = (pieces: PieceState[]) => {
+  const grid = createEmptyGrid();
+
+  pieces.forEach((piece) => {
+    const pattern = getRotatedPattern(piece.type, piece.rotation);
+    const value = piece.type === 'RFB' ? 1 : 2;
+
+    pattern.forEach(([dy, dx]) => {
+      const row = piece.anchorRow + dy;
+      const col = piece.anchorCol + dx;
+
+      if (row >= 0 && col >= 0 && row < GRID_SIZE && col < GRID_SIZE) {
+        grid[row][col] = value;
+      }
+    });
+  });
+
+  return grid;
+};
+
+const clampCell = (row: number, col: number) => ({
+  row: Math.max(0, Math.min(row, GRID_SIZE - 1)),
+  col: Math.max(0, Math.min(col, GRID_SIZE - 1)),
+});
+
 export default function PartBGrid({
   rfbCount,
   lfbCount,
@@ -77,16 +139,290 @@ export default function PartBGrid({
   onLfbCountChange,
 }: PartBGridProps) {
   const { width } = useWindowDimensions();
-  const [grid, setGrid] = useState<number[][]>(() => createEmptyGrid());
+  const [pieces, setPieces] = useState<PieceState[]>([]);
+  const [availableRfbCount, setAvailableRfbCount] = useState(rfbCount);
+  const [availableLfbCount, setAvailableLfbCount] = useState(lfbCount);
   const gridRef = useRef<View | null>(null);
   const containerRef = useRef<View | null>(null);
   const [gridBounds, setGridBounds] = useState<GridBounds | null>(null);
   const [containerOffset, setContainerOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [draggingPiece, setDraggingPiece] = useState<DragState | null>(null);
+  const draggingPieceRef = useRef<DragState | null>(null);
+  const pieceIdCounter = useRef(0);
+  const [hiddenPieceId, setHiddenPieceId] = useState<string | null>(null);
+  const [conflictCells, setConflictCells] = useState<Array<{ row: number; col: number }>>([]);
+  const [conflictPieceId, setConflictPieceId] = useState<string | null>(null);
+  const [blockingPieceIds, setBlockingPieceIds] = useState<string[]>([]);
+
+  const baseGrid = useMemo(() => buildGridFromPieces(pieces), [pieces]);
 
   useEffect(() => {
-    onGridChange(grid);
-  }, [grid, onGridChange]);
+    setAvailableRfbCount(rfbCount);
+  }, [rfbCount]);
+
+  useEffect(() => {
+    setAvailableLfbCount(lfbCount);
+  }, [lfbCount]);
+
+  useEffect(() => {
+    onGridChange(baseGrid);
+  }, [baseGrid, onGridChange]);
+
+  const conflictCellSet = useMemo(() => {
+    const set = new Set<string>();
+    conflictCells.forEach(({ row, col }) => set.add(`${row}:${col}`));
+    return set;
+  }, [conflictCells]);
+
+  const displayGrid = useMemo(() => {
+    if (!hiddenPieceId) {
+      return baseGrid;
+    }
+
+    const hiddenPiece = pieces.find((piece) => piece.id === hiddenPieceId);
+
+    if (!hiddenPiece) {
+      return baseGrid;
+    }
+
+    const clone = baseGrid.map((row) => [...row]);
+    const pattern = getRotatedPattern(hiddenPiece.type, hiddenPiece.rotation);
+
+    pattern.forEach(([dy, dx]) => {
+      const row = hiddenPiece.anchorRow + dy;
+      const col = hiddenPiece.anchorCol + dx;
+
+      if (row >= 0 && col >= 0 && row < GRID_SIZE && col < GRID_SIZE) {
+        clone[row][col] = 0;
+      }
+    });
+
+    return clone;
+  }, [baseGrid, hiddenPieceId, pieces]);
+
+  const updateDraggingPiece = useCallback((next: DragState | null) => {
+    draggingPieceRef.current = next;
+    setDraggingPiece(next);
+  }, []);
+
+  const clearConflict = useCallback(() => {
+    setConflictCells([]);
+    setConflictPieceId(null);
+    setBlockingPieceIds([]);
+  }, []);
+
+  interface ConflictStatePayload {
+    pieceId: string | null;
+    cells: Array<{ row: number; col: number }>;
+    blockingPieceIds: string[];
+  }
+
+  const setConflictState = useCallback(({ pieceId, cells, blockingPieceIds }: ConflictStatePayload) => {
+    setConflictPieceId(pieceId);
+    setConflictCells(cells);
+    setBlockingPieceIds(blockingPieceIds);
+  }, []);
+
+  const canInteractWithPiece = useCallback(
+    (pieceId?: string) => {
+      if (!conflictPieceId) {
+        return true;
+      }
+
+      return pieceId ? conflictPieceId === pieceId : false;
+    },
+    [conflictPieceId]
+  );
+
+  const getNextPieceId = useCallback(() => {
+    pieceIdCounter.current += 1;
+    return `piece-${pieceIdCounter.current}`;
+  }, []);
+
+  const getPieceCells = useCallback(
+    (piece: { type: BlockType; rotation: PieceRotation; anchorRow: number; anchorCol: number }) => {
+      const pattern = getRotatedPattern(piece.type, piece.rotation);
+      return pattern.map(([dy, dx]) => ({
+        row: piece.anchorRow + dy,
+        col: piece.anchorCol + dx,
+      }));
+    },
+    []
+  );
+
+  const blockingCellSet = useMemo(() => {
+    const set = new Set<string>();
+
+    blockingPieceIds.forEach((pieceId) => {
+      const piece = pieces.find((p) => p.id === pieceId);
+      if (!piece) {
+        return;
+      }
+
+      getPieceCells(piece).forEach(({ row, col }) => {
+        set.add(`${row}:${col}`);
+      });
+    });
+
+    return set;
+  }, [blockingPieceIds, getPieceCells, pieces]);
+
+  const validatePlacement = useCallback(
+    (
+      candidate: { type: BlockType; rotation: PieceRotation; anchorRow: number; anchorCol: number },
+      existingPieces: PieceState[],
+      ignorePieceId?: string
+    ) => {
+      const occupiedBy = new Map<string, string>();
+
+      existingPieces.forEach((piece) => {
+        if (piece.id === ignorePieceId) {
+          return;
+        }
+
+        getPieceCells(piece).forEach(({ row, col }) => {
+          occupiedBy.set(`${row}:${col}`, piece.id);
+        });
+      });
+
+      const conflicts: Array<{ row: number; col: number }> = [];
+      const blockingIds = new Set<string>();
+
+      getPieceCells(candidate).forEach(({ row, col }) => {
+        if (row < 0 || col < 0 || row >= GRID_SIZE || col >= GRID_SIZE) {
+          conflicts.push(clampCell(row, col));
+          return;
+        }
+
+        const key = `${row}:${col}`;
+        const blockingPieceId = occupiedBy.get(key);
+
+        if (blockingPieceId) {
+          conflicts.push({ row, col });
+          blockingIds.add(blockingPieceId);
+        }
+      });
+
+      return {
+        valid: conflicts.length === 0,
+        conflicts,
+        blockingPieceIds: Array.from(blockingIds),
+      };
+    },
+    [getPieceCells]
+  );
+
+  const placeNewPiece = useCallback(
+    (type: BlockType, anchorRow: number, anchorCol: number, rotation: PieceRotation = 0) => {
+      const candidate: PieceState = {
+        id: getNextPieceId(),
+        type,
+        rotation,
+        anchorRow,
+        anchorCol,
+      };
+      let placed = false;
+
+      setPieces((prev) => {
+        const { valid, conflicts, blockingPieceIds } = validatePlacement(candidate, prev);
+
+        if (!valid) {
+          setConflictState({ pieceId: null, cells: conflicts, blockingPieceIds });
+          placed = false;
+          return prev;
+        }
+
+        placed = true;
+        clearConflict();
+
+        if (type === 'RFB') {
+          setAvailableRfbCount((prevCount) => Math.max(0, prevCount - 1));
+          onRfbCountChange?.(-1);
+        } else {
+          setAvailableLfbCount((prevCount) => Math.max(0, prevCount - 1));
+          onLfbCountChange?.(-1);
+        }
+
+        return [...prev, candidate];
+      });
+
+      return placed;
+    },
+    [
+      clearConflict,
+      getNextPieceId,
+      onLfbCountChange,
+      onRfbCountChange,
+      setConflictState,
+      validatePlacement,
+    ]
+  );
+
+  const moveExistingPiece = useCallback(
+    (pieceId: string, anchorRow: number, anchorCol: number) => {
+      let moved = false;
+
+      setPieces((prev) => {
+        const index = prev.findIndex((piece) => piece.id === pieceId);
+
+        if (index === -1) {
+          return prev;
+        }
+
+        const candidate = { ...prev[index], anchorRow, anchorCol };
+        const { valid, conflicts, blockingPieceIds } = validatePlacement(candidate, prev, pieceId);
+
+        if (!valid) {
+          setConflictState({ pieceId, cells: conflicts, blockingPieceIds });
+          moved = false;
+          return prev;
+        }
+
+        const updated = [...prev];
+        updated[index] = candidate;
+        moved = true;
+        clearConflict();
+        return updated;
+      });
+
+      if (!moved) {
+        return false;
+      }
+
+      setHiddenPieceId(null);
+      return true;
+    },
+    [clearConflict, setConflictState, validatePlacement]
+  );
+
+  const rotatePiece = useCallback(
+    (pieceId: string) => {
+      setPieces((prev) => {
+        const index = prev.findIndex((piece) => piece.id === pieceId);
+
+        if (index === -1) {
+          return prev;
+        }
+
+        const current = prev[index];
+        const rotationIndex = ROTATIONS.indexOf(current.rotation);
+        const nextRotation = ROTATIONS[(rotationIndex + 1) % ROTATIONS.length];
+        const candidate = { ...current, rotation: nextRotation };
+        const { valid, conflicts, blockingPieceIds } = validatePlacement(candidate, prev, pieceId);
+
+        if (!valid) {
+          setConflictState({ pieceId, cells: conflicts, blockingPieceIds });
+          return prev;
+        }
+
+        clearConflict();
+        const updated = [...prev];
+        updated[index] = candidate;
+        return updated;
+      });
+    },
+    [clearConflict, setConflictState, validatePlacement]
+  );
 
   /**
    * Calculates optimal cell size based on available space
@@ -128,72 +464,11 @@ export default function PartBGrid({
     });
   }, []);
 
-  const canPlaceBlock = useCallback(
-    (gridState: number[][], anchorRow: number, anchorCol: number, type: BlockType) => {
-      const pattern = BLOCK_SHAPES[type];
-
-      return pattern.every(([dy, dx]) => {
-        const rowIndex = anchorRow + dy;
-        const colIndex = anchorCol + dx;
-
-        if (
-          rowIndex < 0 ||
-          colIndex < 0 ||
-          rowIndex >= GRID_SIZE ||
-          colIndex >= GRID_SIZE ||
-          gridState[rowIndex][colIndex] !== 0
-        ) {
-          return false;
-        }
-
-        return true;
-      });
-    },
-    []
-  );
-
-  const placeBlock = useCallback(
-    (type: BlockType, targetRow: number, targetCol: number) => {
-      const anchorRow = targetRow - BLOCK_CENTER_OFFSET;
-      const anchorCol = targetCol - BLOCK_CENTER_OFFSET;
-      let placed = false;
-
-      setGrid((prev) => {
-        if (!canPlaceBlock(prev, anchorRow, anchorCol, type)) {
-          return prev;
-        }
-
-        const updated = prev.map((row) => [...row]);
-        const pattern = BLOCK_SHAPES[type];
-        const value = type === 'RFB' ? 1 : 2;
-
-        pattern.forEach(([dy, dx]) => {
-          updated[anchorRow + dy][anchorCol + dx] = value;
-        });
-
-        placed = true;
-        return updated;
-      });
-
-      if (placed) {
-        if (type === 'RFB') {
-          onRfbCountChange?.(-1);
-        } else {
-          onLfbCountChange?.(-1);
-        }
-      }
-
-      return placed;
-    },
-    [canPlaceBlock, onLfbCountChange, onRfbCountChange]
-  );
-
-  const handleDrop = useCallback(
-    (type: BlockType, pageX: number, pageY: number) => {
+  const convertPointToGridCell = useCallback(
+    (pageX: number, pageY: number) => {
       if (!gridBounds) {
-        return false;
+        return null;
       }
-
       const centerX = gridBounds.x + gridBounds.width / 2;
       const centerY = gridBounds.y + gridBounds.height / 2;
       const relativeX = pageX - centerX;
@@ -209,43 +484,91 @@ export default function PartBGrid({
       const localY = unrotatedY + halfSize;
 
       if (localX < 0 || localY < 0 || localX >= gridPixelSize || localY >= gridPixelSize) {
-        return false;
+        return null;
       }
 
       const col = Math.floor(localX / cellSize);
       const row = Math.floor(localY / cellSize);
 
-      return placeBlock(type, row, col);
+      return { row, col };
     },
-    [cellSize, gridBounds, placeBlock]
+    [cellSize, gridBounds]
+  );
+
+  const handleDrop = useCallback(
+    (dragState: DragState, pageX: number, pageY: number) => {
+      const cell = convertPointToGridCell(pageX, pageY);
+
+      if (!cell) {
+        if (dragState.source === 'board' && dragState.pieceId) {
+          setConflictState({ pieceId: dragState.pieceId, cells: [], blockingPieceIds: [] });
+        }
+
+        return false;
+      }
+
+      const anchorRow = cell.row - dragState.offsetRow;
+      const anchorCol = cell.col - dragState.offsetCol;
+
+      if (dragState.source === 'counter') {
+        return placeNewPiece(dragState.type, anchorRow, anchorCol, dragState.rotation);
+      }
+
+      if (dragState.source === 'board' && dragState.pieceId) {
+        return moveExistingPiece(dragState.pieceId, anchorRow, anchorCol);
+      }
+
+      return false;
+    },
+    [convertPointToGridCell, moveExistingPiece, placeNewPiece, setConflictState]
   );
 
   const createCounterPanResponder = useCallback(
     (type: BlockType) =>
       PanResponder.create({
-        onStartShouldSetPanResponder: () => (type === 'RFB' ? rfbCount > 0 : lfbCount > 0),
+        onStartShouldSetPanResponder: () =>
+          canInteractWithPiece() &&
+          (type === 'RFB' ? availableRfbCount > 0 : availableLfbCount > 0),
         onPanResponderGrant: (evt) => {
-          setDraggingPiece({ type, x: evt.nativeEvent.pageX, y: evt.nativeEvent.pageY });
+          updateDraggingPiece({
+            source: 'counter',
+            type,
+            rotation: 0,
+            offsetRow: BLOCK_CENTER_OFFSET,
+            offsetCol: BLOCK_CENTER_OFFSET,
+            x: evt.nativeEvent.pageX,
+            y: evt.nativeEvent.pageY,
+          });
         },
         onPanResponderMove: (_, gestureState) => {
+          const current = draggingPieceRef.current;
+
+          if (!current) {
+            return;
+          }
+
           const { moveX, moveY } = gestureState;
-          setDraggingPiece((prev) => ({
-            type,
-            x: moveX ?? prev?.x ?? 0,
-            y: moveY ?? prev?.y ?? 0,
-          }));
+          updateDraggingPiece({
+            ...current,
+            x: moveX ?? current.x,
+            y: moveY ?? current.y,
+          });
         },
         onPanResponderRelease: (evt, gestureState) => {
           const dropX = gestureState.moveX ?? evt.nativeEvent.pageX;
           const dropY = gestureState.moveY ?? evt.nativeEvent.pageY;
-          setDraggingPiece(null);
-          handleDrop(type, dropX, dropY);
+          const current = draggingPieceRef.current;
+          updateDraggingPiece(null);
+
+          if (current) {
+            handleDrop(current, dropX, dropY);
+          }
         },
         onPanResponderTerminate: () => {
-          setDraggingPiece(null);
+          updateDraggingPiece(null);
         },
       }),
-    [handleDrop, lfbCount, rfbCount]
+    [availableLfbCount, availableRfbCount, canInteractWithPiece, handleDrop, updateDraggingPiece]
   );
 
   const rfbPanResponder = useMemo<PanResponderInstance>(
@@ -255,6 +578,147 @@ export default function PartBGrid({
   const lfbPanResponder = useMemo<PanResponderInstance>(
     () => createCounterPanResponder('LFB'),
     [createCounterPanResponder]
+  );
+
+  const boardInteractionRef = useRef<{
+    pieceId: string;
+    offsetRow: number;
+    offsetCol: number;
+    startX: number;
+    startY: number;
+    hasMoved: boolean;
+    type: BlockType;
+    rotation: PieceRotation;
+  } | null>(null);
+
+  const findPieceAtCell = useCallback(
+    (row: number, col: number) => pieces.find((piece) => getPieceCells(piece).some((cell) => cell.row === row && cell.col === col)),
+    [getPieceCells, pieces]
+  );
+
+  const boardPanResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: (evt) => {
+          if (!gridBounds) {
+            return false;
+          }
+
+          const cell = convertPointToGridCell(evt.nativeEvent.pageX, evt.nativeEvent.pageY);
+
+          if (!cell) {
+            return false;
+          }
+
+          const piece = findPieceAtCell(cell.row, cell.col);
+
+          if (!piece || !canInteractWithPiece(piece.id)) {
+            return false;
+          }
+
+          boardInteractionRef.current = {
+            pieceId: piece.id,
+            offsetRow: cell.row - piece.anchorRow,
+            offsetCol: cell.col - piece.anchorCol,
+            startX: evt.nativeEvent.pageX,
+            startY: evt.nativeEvent.pageY,
+            hasMoved: false,
+            type: piece.type,
+            rotation: piece.rotation,
+          };
+
+          return true;
+        },
+        onPanResponderMove: (_, gestureState) => {
+          const context = boardInteractionRef.current;
+
+          if (!context) {
+            return;
+          }
+
+          const currentX = gestureState.moveX ?? context.startX;
+          const currentY = gestureState.moveY ?? context.startY;
+          const distance = Math.sqrt(
+            (currentX - context.startX) * (currentX - context.startX) +
+              (currentY - context.startY) * (currentY - context.startY)
+          );
+
+          if (!context.hasMoved && distance < MOVE_THRESHOLD_PX) {
+            return;
+          }
+
+          if (!context.hasMoved) {
+            context.hasMoved = true;
+            clearConflict();
+            setHiddenPieceId(context.pieceId);
+            updateDraggingPiece({
+              source: 'board',
+              pieceId: context.pieceId,
+              type: context.type,
+              rotation: context.rotation,
+              offsetRow: context.offsetRow,
+              offsetCol: context.offsetCol,
+              x: currentX,
+              y: currentY,
+            });
+          } else {
+            const current = draggingPieceRef.current;
+
+            if (!current) {
+              return;
+            }
+
+            updateDraggingPiece({
+              ...current,
+              x: currentX,
+              y: currentY,
+            });
+          }
+        },
+        onPanResponderRelease: (evt, gestureState) => {
+          const context = boardInteractionRef.current;
+
+          if (!context) {
+            return;
+          }
+
+          if (context.hasMoved) {
+            const dropX = gestureState.moveX ?? evt.nativeEvent.pageX;
+            const dropY = gestureState.moveY ?? evt.nativeEvent.pageY;
+            const current = draggingPieceRef.current;
+            updateDraggingPiece(null);
+
+            if (current) {
+              const success = handleDrop(current, dropX, dropY);
+
+              if (!success) {
+                setHiddenPieceId(null);
+              }
+            } else {
+              setHiddenPieceId(null);
+            }
+          } else {
+            rotatePiece(context.pieceId);
+          }
+
+          boardInteractionRef.current = null;
+        },
+        onPanResponderTerminate: () => {
+          updateDraggingPiece(null);
+          setHiddenPieceId(null);
+          boardInteractionRef.current = null;
+        },
+      }),
+    [
+      clearConflict,
+      canInteractWithPiece,
+      convertPointToGridCell,
+      findPieceAtCell,
+      gridBounds,
+      handleDrop,
+      rotatePiece,
+      updateDraggingPiece,
+    ]
   );
 
   /**
@@ -318,13 +782,16 @@ export default function PartBGrid({
    * Renders a single grid cell
    */
   const renderCell = (row: number, col: number) => {
-    const cellValue = grid[row]?.[col] ?? 0;
+    const cellValue = displayGrid[row]?.[col] ?? 0;
     const fillColor =
       cellValue === 1
         ? GAME_COLORS.lCounter
         : cellValue === 2
         ? GAME_COLORS.jCounter
         : GAME_COLORS.background;
+    const key = `${row}:${col}`;
+    const isConflicted = conflictCellSet.has(key);
+    const isBlocking = blockingCellSet.has(key);
     const borderColor = cellValue === 0 ? GAME_COLORS.gridLineFaded : GAME_COLORS.gridLine;
 
     return (
@@ -338,9 +805,38 @@ export default function PartBGrid({
             backgroundColor: fillColor,
             borderColor,
             borderWidth: 0.5,
+            position: 'relative',
           },
         ]}
-      />
+      >
+        {isBlocking ? (
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              borderColor: GAME_COLORS.fail,
+              borderWidth: 2,
+            }}
+          />
+        ) : null}
+        {isConflicted ? (
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              top: 2,
+              left: 2,
+              right: 2,
+              bottom: 2,
+              backgroundColor: 'rgba(255, 0, 0, 0.35)',
+            }}
+          />
+        ) : null}
+      </View>
     );
   };
 
@@ -357,7 +853,7 @@ export default function PartBGrid({
     if (!draggingPiece) return null;
 
     const color = draggingPiece.type === 'RFB' ? GAME_COLORS.lCounter : GAME_COLORS.jCounter;
-    const pattern = BLOCK_SHAPES[draggingPiece.type];
+    const pattern = getRotatedPattern(draggingPiece.type, draggingPiece.rotation);
     const blockPixelSize = BLOCK_DIMENSION * cellSize;
 
     const relativeX = draggingPiece.x - containerOffset.x;
@@ -403,7 +899,7 @@ export default function PartBGrid({
 
   return (
     <View ref={containerRef} onLayout={handleContainerLayout} style={{ flex: 1, width: '100%' }}>
-      <View style={gameStyles.gridWrapper}>
+      <View style={gameStyles.gridWrapper} {...boardPanResponder.panHandlers}>
         <View
           ref={gridRef}
           onLayout={handleGridLayout}
@@ -419,8 +915,8 @@ export default function PartBGrid({
       </View>
 
       <View style={gameStyles.countersContainer}>
-        {renderCounter('RFB', rfbCount, GAME_COLORS.lCounter, 'L')}
-        {renderCounter('LFB', lfbCount, GAME_COLORS.jCounter, '⅃')}
+        {renderCounter('RFB', availableRfbCount, GAME_COLORS.lCounter, 'L')}
+        {renderCounter('LFB', availableLfbCount, GAME_COLORS.jCounter, '⅃')}
         {renderCounter('W', wCount, GAME_COLORS.wCounter, 'W')}
       </View>
 
