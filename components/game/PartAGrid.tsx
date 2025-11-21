@@ -1,30 +1,30 @@
 import {
-  GAME_COLORS,
-  GRID_SIZE,
-  GamePhase,
-  L_PATTERNS,
-  PIECE_COLORS,
-  Piece,
-  SCORES,
+    GAME_COLORS,
+    GRID_SIZE,
+    GamePhase,
+    L_PATTERNS,
+    PIECE_COLORS,
+    Piece,
+    SCORES,
 } from '@/constants/game';
 import {
-  canPlacePiece,
-  createEmptyGrid,
-  detectLBlocks,
-  generateRandomPiece,
-  isGridFullToTop,
-  placePiece,
-  removeCells,
-  rotatePiece,
+    canPlacePiece,
+    createEmptyGrid,
+    detectLBlocks,
+    generateRandomPiece,
+    isGridFullToTop,
+    placePiece,
+    removeCells,
+    rotatePiece,
 } from '@/utils/gameLogic';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  GestureResponderEvent,
-  PanResponder,
-  PanResponderGestureState,
-  Platform,
-  View,
-  useWindowDimensions,
+    GestureResponderEvent,
+    PanResponder,
+    PanResponderGestureState,
+    Platform,
+    View,
+    useWindowDimensions,
 } from 'react-native';
 import { gameStyles } from '../../styles/styles';
 import Counters from './Counters';
@@ -263,24 +263,31 @@ export default function PartAGrid({
         const { grid: finalGrid, rfbCount: newRFBs, lfbCount: newLFBs, score: newScore } =
           processLBlockRemoval(updatedGrid);
 
-        // Update counts and score via callbacks
-        if (newRFBs > 0) {
-          onRfbCountChange(newRFBs);
-        }
-        if (newLFBs > 0) {
-          onLfbCountChange(newLFBs);
-        }
-        if (newScore > 0) {
-          onScoreChange(newScore);
-        }
-
         setGrid(finalGrid);
 
-        // Check if game is over (grid full to top)
+        // Defer callback updates to avoid updating parent during render
+        setTimeout(() => {
+          // Update counts and score via callbacks
+          if (newRFBs > 0) {
+            onRfbCountChange(newRFBs);
+          }
+          if (newLFBs > 0) {
+            onLfbCountChange(newLFBs);
+          }
+          if (newScore > 0) {
+            onScoreChange(newScore);
+          }
+
+          // Check if game is over (grid full to top)
+          if (isGridFullToTop(finalGrid)) {
+            onPhaseChange('transitionAB');
+            setGameStarted(false);
+            onGameStartedChange(false);
+          }
+        }, 0);
+
+        // Check if game is over (grid full to top) - return null to stop piece generation
         if (isGridFullToTop(finalGrid)) {
-          onPhaseChange('transitionAB');
-          setGameStarted(false);
-          onGameStartedChange(false);
           return null;
         }
 

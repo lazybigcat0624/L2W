@@ -231,7 +231,10 @@ export default function PartBGrid({
   }, [lfbCount]);
 
   useEffect(() => {
-    onGridChange(baseGrid);
+    // Defer callback to avoid updating parent during render
+    setTimeout(() => {
+      onGridChange(baseGrid);
+    }, 0);
   }, [baseGrid, onGridChange]);
 
   const conflictCellSet = useMemo(() => {
@@ -459,9 +462,12 @@ export default function PartBGrid({
             }
           });
 
+          // Defer callbacks to avoid updating parent during render
           if (newCount > 0) {
-            onWCountChange?.(newCount);
-            onScoreChange?.(SCORES.W_BLOCK * newCount);
+            setTimeout(() => {
+              onWCountChange?.(newCount);
+              onScoreChange?.(SCORES.W_BLOCK * newCount);
+            }, 0);
           }
 
           return updated;
@@ -495,9 +501,13 @@ export default function PartBGrid({
           const updated = new Set(prev);
           destroyed.forEach((key) => updated.delete(key));
           
-          // Decrease score and counter
-          onWCountChange?.(-destroyed.length);
-          onScoreChange?.(-SCORES.W_BLOCK * destroyed.length);
+          // Defer callbacks to avoid updating parent during render
+          if (destroyed.length > 0) {
+            setTimeout(() => {
+              onWCountChange?.(-destroyed.length);
+              onScoreChange?.(-SCORES.W_BLOCK * destroyed.length);
+            }, 0);
+          }
           
           return updated;
         }
@@ -526,7 +536,11 @@ export default function PartBGrid({
   useEffect(() => {
     if (pieces.length < 2) {
       // If less than 2 pieces, unmark any remaining W-block pieces
-      setPieces((prev) => prev.map((p) => (p.isWBlock ? { ...p, isWBlock: false } : p)));
+      setPieces((prev) => {
+        const hasWBlockPieces = prev.some((p) => p.isWBlock);
+        if (!hasWBlockPieces) return prev; // No change needed
+        return prev.map((p) => (p.isWBlock ? { ...p, isWBlock: false } : p));
+      });
       return;
     }
 
@@ -556,11 +570,13 @@ export default function PartBGrid({
         }
       });
 
-      // Update score and counter
+      // Defer callbacks to avoid updating parent during render
       const netChange = newCount - destroyedCount;
       if (netChange !== 0) {
-        onWCountChange?.(netChange);
-        onScoreChange?.(SCORES.W_BLOCK * netChange);
+        setTimeout(() => {
+          onWCountChange?.(netChange);
+          onScoreChange?.(SCORES.W_BLOCK * netChange);
+        }, 0);
       }
 
       return updated;
@@ -573,23 +589,24 @@ export default function PartBGrid({
       piecesInWBlocks.add(wb.lfbId);
     });
 
-    let needsUpdate = false;
-    const updatedPieces = pieces.map((piece) => {
-      const isInWBlock = piecesInWBlocks.has(piece.id);
-      if (isInWBlock && !piece.isWBlock) {
-        needsUpdate = true;
-        return { ...piece, isWBlock: true };
-      }
-      if (!isInWBlock && piece.isWBlock) {
-        needsUpdate = true;
-        return { ...piece, isWBlock: false };
-      }
-      return piece;
-    });
+    // Only update if there's an actual change to avoid infinite loops
+    setPieces((prev) => {
+      let needsUpdate = false;
+      const updatedPieces = prev.map((piece) => {
+        const isInWBlock = piecesInWBlocks.has(piece.id);
+        if (isInWBlock && !piece.isWBlock) {
+          needsUpdate = true;
+          return { ...piece, isWBlock: true };
+        }
+        if (!isInWBlock && piece.isWBlock) {
+          needsUpdate = true;
+          return { ...piece, isWBlock: false };
+        }
+        return piece;
+      });
 
-    if (needsUpdate) {
-      setPieces(updatedPieces);
-    }
+      return needsUpdate ? updatedPieces : prev;
+    });
   }, [pieces, detectAllWBlocks, onWCountChange, onScoreChange]);
 
   const blockingCellSet = useMemo(() => {
@@ -688,50 +705,52 @@ export default function PartBGrid({
   //   - If we can form W-blocks with existing pieces, don't complete
   //   - If we can't form W-blocks with existing pieces, complete (even if we can place remaining pieces)
   useEffect(() => {
-    // If we can still make W-blocks (both counters > 0)
-    if (availableRfbCount > 0 && availableLfbCount > 0) {
-      // Check if there's space to place at least one piece of each type
-      const canPlaceRfb = canPlacePieceType('RFB', pieces);
-      const canPlaceLfb = canPlacePieceType('LFB', pieces);
+    // Defer callback to avoid updating parent during render
+    setTimeout(() => {
+      // If we can still make W-blocks (both counters > 0)
+      if (availableRfbCount > 0 && availableLfbCount > 0) {
+        // Check if there's space to place at least one piece of each type
+        const canPlaceRfb = canPlacePieceType('RFB', pieces);
+        const canPlaceLfb = canPlacePieceType('LFB', pieces);
 
-      // If there's no space to place at least one piece of each type, Part B is complete
-      // (Need both RFB and LFB to form W-block, so both must be placeable)
-      if (!canPlaceRfb || !canPlaceLfb) {
-        onPartBEnd?.();
-        return;
+        // If there's no space to place at least one piece of each type, Part B is complete
+        // (Need both RFB and LFB to form W-block, so both must be placeable)
+        if (!canPlaceRfb || !canPlaceLfb) {
+          onPartBEnd?.();
+          return;
+        }
+      } else {
+        // If one counter is zero, check if we have both RFB and LFB pieces on the grid
+        // that could potentially form a W-block
+        const hasRfbPieces = pieces.some((p) => p.type === 'RFB');
+        const hasLfbPieces = pieces.some((p) => p.type === 'LFB');
+        
+        // If we don't have both RFB and LFB pieces on the grid, we can't form W-blocks, so Part B is complete
+        if (!hasRfbPieces || !hasLfbPieces) {
+          onPartBEnd?.();
+          return;
+        }
+        
+        // If we have both RFB and LFB pieces on the grid, check if all possible W-blocks are already formed
+        // Count how many RFB and LFB pieces we have
+        const rfbPieces = pieces.filter((p) => p.type === 'RFB');
+        const lfbPieces = pieces.filter((p) => p.type === 'LFB');
+        const formedRfbCount = rfbPieces.filter((p) => p.isWBlock).length;
+        const formedLfbCount = lfbPieces.filter((p) => p.isWBlock).length;
+        
+        // Maximum possible W-blocks is min(rfbCount, lfbCount)
+        const maxPossibleWBlocks = Math.min(rfbPieces.length, lfbPieces.length);
+        
+        // If all possible W-blocks are already formed (all pieces are in W-blocks), Part B is complete
+        if (formedRfbCount >= maxPossibleWBlocks && formedLfbCount >= maxPossibleWBlocks) {
+          onPartBEnd?.();
+          return;
+        }
+        
+        // If we have both types but not all pieces are in W-blocks, don't complete yet
+        // (User can move/rotate pieces to form more W-blocks, even if they're not in W-block pattern yet)
       }
-    } else {
-      // If one counter is zero, check if we have both RFB and LFB pieces on the grid
-      // that could potentially form a W-block
-      const hasRfbPieces = pieces.some((p) => p.type === 'RFB');
-      const hasLfbPieces = pieces.some((p) => p.type === 'LFB');
-      
-      // If we don't have both RFB and LFB pieces on the grid, we can't form W-blocks, so Part B is complete
-      if (!hasRfbPieces || !hasLfbPieces) {
-        onPartBEnd?.();
-        return;
-      }
-      
-      // If we have both RFB and LFB pieces on the grid, check if all possible W-blocks are already formed
-      // Count how many RFB and LFB pieces we have
-      const rfbPieces = pieces.filter((p) => p.type === 'RFB');
-      const lfbPieces = pieces.filter((p) => p.type === 'LFB');
-      const formedRfbCount = rfbPieces.filter((p) => p.isWBlock).length;
-      const formedLfbCount = lfbPieces.filter((p) => p.isWBlock).length;
-      
-      // Maximum possible W-blocks is min(rfbCount, lfbCount)
-      const maxPossibleWBlocks = Math.min(rfbPieces.length, lfbPieces.length);
-      
-      // If all possible W-blocks are already formed (all pieces are in W-blocks), Part B is complete
-      if (formedRfbCount >= maxPossibleWBlocks && formedLfbCount >= maxPossibleWBlocks) {
-        onPartBEnd?.();
-        return;
-      }
-      
-      // If we have both types but not all pieces are in W-blocks, don't complete yet
-      // (User can move/rotate pieces to form more W-blocks, even if they're not in W-block pattern yet)
-      return;
-    }
+    }, 0);
   }, [availableRfbCount, availableLfbCount, pieces, canPlacePieceType, detectAllWBlocks, onPartBEnd]);
 
   const placeNewPiece = useCallback(
@@ -759,10 +778,16 @@ export default function PartBGrid({
 
         if (type === 'RFB') {
           setAvailableRfbCount((prevCount) => Math.max(0, prevCount - 1));
-          onRfbCountChange?.(-1);
+          // Defer callback to avoid updating parent during render
+          setTimeout(() => {
+            onRfbCountChange?.(-1);
+          }, 0);
         } else {
           setAvailableLfbCount((prevCount) => Math.max(0, prevCount - 1));
-          onLfbCountChange?.(-1);
+          // Defer callback to avoid updating parent during render
+          setTimeout(() => {
+            onLfbCountChange?.(-1);
+          }, 0);
         }
 
         const updatedPieces = [...prev, candidate];
@@ -1255,7 +1280,6 @@ export default function PartBGrid({
       >
         {isBlocking ? (
           <View
-            pointerEvents="none"
             style={{
               position: 'absolute',
               top: 0,
@@ -1264,12 +1288,12 @@ export default function PartBGrid({
               bottom: 0,
               borderColor: GAME_COLORS.fail,
               borderWidth: 2,
+              pointerEvents: 'none',
             }}
           />
         ) : null}
         {isConflicted ? (
           <View
-            pointerEvents="none"
             style={{
               position: 'absolute',
               top: 2,
@@ -1277,6 +1301,7 @@ export default function PartBGrid({
               right: 2,
               bottom: 2,
               backgroundColor: 'rgba(255, 0, 0, 0.35)',
+              pointerEvents: 'none',
             }}
           />
         ) : null}
@@ -1305,13 +1330,13 @@ export default function PartBGrid({
 
     return (
       <View
-        pointerEvents="none"
         style={[
           gameStyles.draggingPiece,
           {
             left: relativeX - blockPixelSize / 2,
             top: relativeY - blockPixelSize / 2,
             transform: [{ rotate: `${GRID_ROTATION_DEGREES}deg` }],
+            pointerEvents: 'none',
           },
         ]}
       >
