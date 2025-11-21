@@ -706,51 +706,38 @@ export default function PartBGrid({
   //   - If we can't form W-blocks with existing pieces, complete (even if we can place remaining pieces)
   useEffect(() => {
     // Defer callback to avoid updating parent during render
-    setTimeout(() => {
-      // If we can still make W-blocks (both counters > 0)
-      if (availableRfbCount > 0 && availableLfbCount > 0) {
-        // Check if there's space to place at least one piece of each type
-        const canPlaceRfb = canPlacePieceType('RFB', pieces);
-        const canPlaceLfb = canPlacePieceType('LFB', pieces);
+    // If we can still make W-blocks (both counters > 0)
+    if (availableRfbCount > 0 && availableLfbCount > 0) {
+      // Check if there's space to place at least one piece of each type
+      const canPlaceRfb = canPlacePieceType('RFB', pieces);
+      const canPlaceLfb = canPlacePieceType('LFB', pieces);
 
-        // If there's no space to place at least one piece of each type, Part B is complete
-        // (Need both RFB and LFB to form W-block, so both must be placeable)
-        if (!canPlaceRfb || !canPlaceLfb) {
-          onPartBEnd?.();
-          return;
-        }
-      } else {
-        // If one counter is zero, check if we have both RFB and LFB pieces on the grid
-        // that could potentially form a W-block
-        const hasRfbPieces = pieces.some((p) => p.type === 'RFB');
-        const hasLfbPieces = pieces.some((p) => p.type === 'LFB');
-        
-        // If we don't have both RFB and LFB pieces on the grid, we can't form W-blocks, so Part B is complete
-        if (!hasRfbPieces || !hasLfbPieces) {
-          onPartBEnd?.();
-          return;
-        }
-        
-        // If we have both RFB and LFB pieces on the grid, check if all possible W-blocks are already formed
-        // Count how many RFB and LFB pieces we have
-        const rfbPieces = pieces.filter((p) => p.type === 'RFB');
-        const lfbPieces = pieces.filter((p) => p.type === 'LFB');
-        const formedRfbCount = rfbPieces.filter((p) => p.isWBlock).length;
-        const formedLfbCount = lfbPieces.filter((p) => p.isWBlock).length;
-        
-        // Maximum possible W-blocks is min(rfbCount, lfbCount)
-        const maxPossibleWBlocks = Math.min(rfbPieces.length, lfbPieces.length);
-        
-        // If all possible W-blocks are already formed (all pieces are in W-blocks), Part B is complete
-        if (formedRfbCount >= maxPossibleWBlocks && formedLfbCount >= maxPossibleWBlocks) {
-          onPartBEnd?.();
-          return;
-        }
-        
-        // If we have both types but not all pieces are in W-blocks, don't complete yet
-        // (User can move/rotate pieces to form more W-blocks, even if they're not in W-block pattern yet)
+      // If there's no space to place at least one piece of each type, Part B is complete
+      // (Need both RFB and LFB to form W-block, so both must be placeable)
+      if (!canPlaceRfb || !canPlaceLfb) {
+        onPartBEnd?.();
+        return;
       }
-    }, 0);
+    } else {
+      // If one counter is zero, rely on existing pieces on the board
+      const rfbPieces = pieces.filter((p) => p.type === 'RFB');
+      const lfbPieces = pieces.filter((p) => p.type === 'LFB');
+      const maxPossibleWBlocks = Math.min(rfbPieces.length, lfbPieces.length);
+
+      // If we don't have both piece types on the board, we can't form any more W-blocks
+      if (maxPossibleWBlocks === 0) {
+        onPartBEnd?.();
+        return;
+      }
+
+      const currentWBlocks = detectAllWBlocks(pieces);
+
+      // If we've formed every W-block that is possible with the remaining pieces, Part B is complete
+      if (currentWBlocks.length >= maxPossibleWBlocks) {
+        onPartBEnd?.();
+        return;
+      }
+    }
   }, [availableRfbCount, availableLfbCount, pieces, canPlacePieceType, detectAllWBlocks, onPartBEnd]);
 
   const placeNewPiece = useCallback(
@@ -1266,6 +1253,7 @@ export default function PartBGrid({
     return (
       <View
         key={`${row}-${col}`}
+        pointerEvents="none"
         style={[
           gameStyles.cell,
           {
@@ -1313,7 +1301,7 @@ export default function PartBGrid({
    * Renders a row of grid cells
    */
   const renderRow = (row: number) => (
-    <View key={row} style={gameStyles.row}>
+    <View key={row} style={gameStyles.row} pointerEvents="none">
       {Array.from({ length: GRID_SIZE }, (_, col) => renderCell(row, col))}
     </View>
   );
