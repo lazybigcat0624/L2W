@@ -2,11 +2,11 @@ import { GAME_COLORS, GRID_SIZE, SCORES } from '@/constants/game';
 import { createEmptyGrid } from '@/utils/gameLogic';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-    PanResponder,
-    type PanResponderInstance,
-    Text,
-    View,
-    useWindowDimensions,
+  PanResponder,
+  type PanResponderInstance,
+  Text,
+  View,
+  useWindowDimensions,
 } from 'react-native';
 import { gameStyles } from '../../styles/styles';
 
@@ -87,6 +87,7 @@ const BLOCK_SHAPES: Record<BlockType, number[][]> = {
 
 const ROTATIONS: PieceRotation[] = [0, 90, 180, 270];
 const MOVE_THRESHOLD_PX = 6;
+const TAP_THRESHOLD_PX = 10; // Threshold for considering a release as a tap (larger than move threshold for mobile)
 
 const rotatePattern = (pattern: number[][], rotation: PieceRotation): number[][] => {
   if (rotation === 0) {
@@ -1141,14 +1142,37 @@ export default function PartBGrid({
             return;
           }
 
-          if (context.hasMoved) {
-            const dropX = gestureState.moveX ?? evt.nativeEvent.pageX;
-            const dropY = gestureState.moveY ?? evt.nativeEvent.pageY;
+          // Calculate final distance to determine if this was a tap or drag
+          const finalX = gestureState.moveX ?? evt.nativeEvent.pageX;
+          const finalY = gestureState.moveY ?? evt.nativeEvent.pageY;
+          const finalDistance = Math.sqrt(
+            (finalX - context.startX) * (finalX - context.startX) +
+              (finalY - context.startY) * (finalY - context.startY)
+          );
+
+          // Determine if this was a tap or drag:
+          // - If hasMoved is false: definitely a tap
+          // - If hasMoved is true but final distance is small: treat as tap (mobile jitter)
+          // - If hasMoved is true and final distance is large: treat as drag
+          const isTap = !context.hasMoved || finalDistance < TAP_THRESHOLD_PX;
+
+          if (isTap) {
+            // Tap/rotate - clear any conflict state first
+            clearConflict();
+            
+            // Clean up any dragging state that might have been set during movement
+            updateDraggingPiece(null);
+            setHiddenPieceId(null);
+            
+            // Rotate the piece
+            rotatePiece(context.pieceId);
+          } else {
+            // Actual drag - handle drop
             const current = draggingPieceRef.current;
             updateDraggingPiece(null);
 
             if (current) {
-              const success = handleDrop(current, dropX, dropY);
+              const success = handleDrop(current, finalX, finalY);
               // Always clear hiddenPieceId after drop attempt
               setHiddenPieceId(null);
               
@@ -1159,10 +1183,6 @@ export default function PartBGrid({
             } else {
               setHiddenPieceId(null);
             }
-          } else {
-            // Tap/rotate - clear any conflict state first
-            clearConflict();
-            rotatePiece(context.pieceId);
           }
 
           boardInteractionRef.current = null;
