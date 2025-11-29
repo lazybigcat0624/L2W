@@ -1,16 +1,10 @@
 import { GAME_COLORS, GamePhase, GRID_SIZE, Piece, PIECE_COLORS } from '@/constants/game';
-import React, { useMemo } from 'react';
-import { Text, View, useWindowDimensions } from 'react-native';
-import { gameStyles } from '../../../styles/styles';
-import { useResponsive } from '../../../hooks/useResponsive';
 import { usePartAGridSize } from '@/hooks/usePartAGridSize';
-
-const MIN_CELL_SIZE = 10;
-const MAX_GRID_WIDTH = 500;
-const GRID_HEIGHT_RATIO = 0.45;
-const GRID_PADDING = 40;
-
-type TransitionStage = 'redFail' | 'greenFailForward' | 'button';
+import { TransitionStage } from '@/hooks/useTransitionStage';
+import React, { useMemo } from 'react';
+import { Text, View } from 'react-native';
+import { useResponsive } from '../../../hooks/useResponsive';
+import { gameStyles } from '../../../styles/styles';
 
 interface PartAGameGridProps {
   grid: number[][];
@@ -24,8 +18,8 @@ interface PartAGameGridProps {
  */
 export default function PartAGameGrid({ grid, currentPiece, phase, transitionStage }: PartAGameGridProps) {
   const { letter } = useResponsive();
-  const partAGridWidth = usePartAGridSize() - 2;
-  const cellSize = useMemo(() => partAGridWidth / GRID_SIZE, [partAGridWidth]);
+  const partAGridWidth = usePartAGridSize();
+  const cellSize = useMemo(() => (partAGridWidth - 2) / GRID_SIZE, [partAGridWidth]);
 
   const getCellColors = (row: number, col: number) => {
     // Check if cell is part of the current falling piece
@@ -90,12 +84,13 @@ export default function PartAGameGrid({ grid, currentPiece, phase, transitionSta
     </View>
   );
 
-  const showMessage = phase === 'transitionAB' && transitionStage && transitionStage !== 'button';
+  // Show overlay for all transition stages (including when the button appears)
+  const showMessage = phase === 'transitionAB' && !!transitionStage;
   const showFail = transitionStage === 'redFail';
   const showFailForward = transitionStage === 'greenFailForward' || transitionStage === 'button';
 
   return (
-    <View style={{ position: 'relative' }}>
+    <View style={{ position: 'relative', minHeight: partAGridWidth, minWidth: partAGridWidth }}>
       <View style={gameStyles.gridContainer}>
         {Array.from({ length: GRID_SIZE }, (_, row) => renderRow(row))}
       </View>

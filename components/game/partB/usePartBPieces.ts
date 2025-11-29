@@ -14,7 +14,7 @@ interface UsePartBPiecesProps {
   onLfbCountChange?: (delta: number) => void;
   onWCountChange?: (delta: number) => void;
   onScoreChange?: (delta: number) => void;
-  onGridChange: (grid: number[][]) => void;
+  onGridChange?: (grid: number[][]) => void;
 }
 
 /**
@@ -53,9 +53,11 @@ export function usePartBPieces({
   const baseGrid = useMemo(() => buildGridFromPieces(pieces), [pieces]);
 
   useEffect(() => {
-    setTimeout(() => {
-      onGridChange(baseGrid);
-    }, 0);
+    if (onGridChange) {
+      setTimeout(() => {
+        onGridChange(baseGrid);
+      }, 0);
+    }
   }, [baseGrid, onGridChange]);
 
   // W-block marking for visual feedback

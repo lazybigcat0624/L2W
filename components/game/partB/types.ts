@@ -2,20 +2,6 @@ export type BlockType = 'RFB' | 'LFB';
 export type PieceRotation = 0 | 90 | 180 | 270;
 export type DragSource = 'counter' | 'board';
 
-export interface PartBGridProps {
-  rfbCount: number;
-  lfbCount: number;
-  wCount: number;
-  level: number;
-  score: number;
-  onGridChange: (newGrid: number[][]) => void;
-  onWCountChange?: (delta: number) => void;
-  onRfbCountChange?: (delta: number) => void;
-  onLfbCountChange?: (delta: number) => void;
-  onScoreChange?: (delta: number) => void;
-  onPartBEnd?: () => void;
-}
-
 export interface CounterSizes {
   letter: number;
   number: number;

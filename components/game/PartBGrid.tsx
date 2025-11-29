@@ -1,13 +1,14 @@
 import { GRID_SIZE } from '@/constants/game';
+import { usePartAGridSize } from '@/hooks/usePartAGridSize';
 import React, { useMemo, useState } from 'react';
 import { View } from 'react-native';
+import { useGameContext } from '../../contexts/GameContext';
 import { gameStyles } from '../../styles/styles';
 import GameInfo from './GameInfo';
-import { ROTATION_FACTOR } from './partB/constants';
 import { DraggingOverlay } from './partB/DraggingOverlay';
 import { GameGrid } from './partB/GameGrid';
+import PartBControls from './partB/PartBControls';
 import { PartBCounters } from './partB/PartBCounters';
-import type { PartBGridProps } from './partB/types';
 import { usePartBCompletion } from './partB/usePartBCompletion';
 import { usePartBConflict } from './partB/usePartBConflict';
 import { usePartBDragDrop } from './partB/usePartBDragDrop';
@@ -18,33 +19,22 @@ import { getRotatedPattern } from './partB/utils';
 /**
  * Part B Grid Component
  * 
- * Simplified component that orchestrates Part B game logic using hooks
+ * Uses context for state management - no prop drilling
  * Separated concerns: pieces, drag/drop, conflicts, layout, completion
  */
-export default function PartBGrid({
-  rfbCount,
-  lfbCount,
-  wCount,
-  level,
-  score,
-  onGridChange,
-  onRfbCountChange,
-  onLfbCountChange,
-  onWCountChange,
-  onScoreChange,
-  onPartBEnd,
-}: PartBGridProps) {
+export default function PartBGrid() {
+  const game = useGameContext();
   const [hiddenPieceId, setHiddenPieceId] = useState<string | null>(null);
+  const [isComplete, setIsComplete] = useState(false);
 
   // Piece management hook
   const pieces = usePartBPieces({
-    initialRfbCount: rfbCount,
-    initialLfbCount: lfbCount,
-    onRfbCountChange,
-    onLfbCountChange,
-    onWCountChange,
-    onScoreChange,
-    onGridChange,
+    initialRfbCount: game.rfbCount,
+    initialLfbCount: game.lfbCount,
+    onRfbCountChange: game.updateRfbCount,
+    onLfbCountChange: game.updateLfbCount,
+    onWCountChange: game.updateWCount,
+    onScoreChange: game.updateScore,
   });
 
   // Conflict management hook
@@ -58,7 +48,10 @@ export default function PartBGrid({
     availableRfbCount: pieces.availableRfbCount,
     availableLfbCount: pieces.availableLfbCount,
     pieces: pieces.pieces,
-    onPartBEnd,
+    onPartBEnd: () => {
+      setIsComplete(true);
+      game.handlePartBEnd();
+    },
   });
 
   // Drag and drop hook
@@ -108,18 +101,19 @@ export default function PartBGrid({
 
   // Get blocking cell set for visual feedback
   const blockingCellSet = conflict.getBlockingCellSet(pieces.pieces);
+  const partAGridWidth = usePartAGridSize();
 
   return (
     <View ref={layout.containerRef} onLayout={layout.handleContainerLayout} >
-      <GameInfo level={level} score={score} />
-      
+      <GameInfo level={game.level} score={game.score} />
+
       <View
         style={[
           gameStyles.gridWrapper,
           {
             // Height should match the diagonal of the rotated grid
-            height: layout.cellSize * GRID_SIZE * ROTATION_FACTOR,
-            minHeight: layout.cellSize * GRID_SIZE * ROTATION_FACTOR,
+            minHeight: partAGridWidth,
+            minWidth: partAGridWidth,
           },
         ]}
         {...dragDrop.boardPanResponder.panHandlers}
@@ -139,11 +133,13 @@ export default function PartBGrid({
         <PartBCounters
           rfbCount={pieces.availableRfbCount}
           lfbCount={pieces.availableLfbCount}
-          wCount={wCount}
+          wCount={game.wCount}
           rfbPanHandlers={dragDrop.rfbPanResponder.panHandlers}
           lfbPanHandlers={dragDrop.lfbPanResponder.panHandlers}
         />
       </View>
+
+      <PartBControls onRestart={game.handleRestart} showRestart={isComplete} />
 
       <DraggingOverlay
         draggingPiece={dragDrop.draggingPiece}

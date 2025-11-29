@@ -15,13 +15,10 @@ const FALL_INTERVAL_MS = 1000;
 
 interface UsePartAGameLogicProps {
   phase: GamePhase;
-  onGridChange: (grid: number[][]) => void;
-  onCurrentPieceChange: (piece: Piece | null) => void;
   onScoreChange: (delta: number) => void;
   onRfbCountChange: (delta: number) => void;
   onLfbCountChange: (delta: number) => void;
   onPhaseChange: (phase: GamePhase) => void;
-  onGameStartedChange: (started: boolean) => void;
 }
 
 /**
@@ -32,13 +29,10 @@ interface UsePartAGameLogicProps {
  */
 export function usePartAGameLogic({
   phase,
-  onGridChange,
-  onCurrentPieceChange,
   onScoreChange,
   onRfbCountChange,
   onLfbCountChange,
   onPhaseChange,
-  onGameStartedChange,
 }: UsePartAGameLogicProps) {
   const [grid, setGrid] = useState<number[][]>(createEmptyGrid());
   const [currentPiece, setCurrentPiece] = useState<Piece | null>(null);
@@ -53,13 +47,11 @@ export function usePartAGameLogic({
   // Keep refs synchronized with state
   useEffect(() => {
     gridRef.current = grid;
-    onGridChange(grid);
-  }, [grid, onGridChange]);
+  }, [grid]);
 
   useEffect(() => {
     currentPieceRef.current = currentPiece;
-    onCurrentPieceChange(currentPiece);
-  }, [currentPiece, onCurrentPieceChange]);
+  }, [currentPiece]);
 
   /**
    * Processes L-block detection and removal
@@ -154,7 +146,6 @@ export function usePartAGameLogic({
           if (isGridFullToTop(finalGrid)) {
             onPhaseChange('transitionAB');
             setGameStarted(false);
-            onGameStartedChange(false);
           }
         }, 0);
 
@@ -180,7 +171,6 @@ export function usePartAGameLogic({
     gameStarted,
     processLBlockRemoval,
     onPhaseChange,
-    onGameStartedChange,
     onScoreChange,
     onRfbCountChange,
     onLfbCountChange,
@@ -198,8 +188,7 @@ export function usePartAGameLogic({
     setCurrentPiece(firstPiece);
     setNextPiece(secondPiece);
     setGameStarted(true);
-    onGameStartedChange(true);
-  }, [onGameStartedChange]);
+  }, []);
 
   /**
    * Move piece horizontally

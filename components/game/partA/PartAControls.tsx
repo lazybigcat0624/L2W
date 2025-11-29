@@ -1,10 +1,9 @@
 import { GamePhase } from '@/constants/game';
+import { TransitionStage } from '@/hooks/useTransitionStage';
 import React from 'react';
 import { View } from 'react-native';
 import { gameStyles } from '../../../styles/styles';
 import GameButton from '../GameButton';
-
-type TransitionStage = 'redFail' | 'greenFailForward' | 'button';
 
 interface PartAControlsProps {
   phase: GamePhase;
