@@ -35,11 +35,60 @@ npm run reset-project
 
 This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
 
+## Building the App
+
+### Using EAS Build (Recommended)
+
+EAS Build runs in the cloud and avoids local build issues:
+
+```bash
+# Install EAS CLI
+npm install -g eas-cli
+
+# Login to Expo
+eas login
+
+# Build for Android
+eas build --profile production --platform android
+
+# Build for iOS
+eas build --profile production --platform ios
+
+# Build for both platforms
+eas build --profile production --platform all
+```
+
+Build profiles available:
+- `development` - Development build with dev client
+- `preview` - Preview APK for testing
+- `production` - Production APK for release
+
+### Local Builds
+
+For local Android builds:
+
+```bash
+# Development build
+npm run android
+
+# Production APK
+npm run build:android:release
+
+# ARM64 only (smaller APK)
+npm run build:android:release:arm64
+
+# Universal APK bundle
+npm run build:android:universal
+```
+
+**Note:** If you encounter TLS/SSL errors during local builds, use EAS Build instead.
+
 ## Learn more
 
 To learn more about developing your project with Expo, look at the following resources:
 
 - [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
+- [EAS Build documentation](https://docs.expo.dev/build/introduction/): Learn about cloud builds with EAS.
 - [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
 
 ## Join the community
