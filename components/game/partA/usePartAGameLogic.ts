@@ -1,5 +1,4 @@
 import { GamePhase, L_PATTERNS, Piece, SCORES } from '@/constants/game';
-import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   canPlacePiece,
   createEmptyGrid,
@@ -10,11 +9,13 @@ import {
   removeCells,
   rotatePiece,
 } from '@/utils/gameLogic';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 const FALL_INTERVAL_MS = 1000;
 
 interface UsePartAGameLogicProps {
   phase: GamePhase;
+  level: number;
   onScoreChange: (delta: number) => void;
   onRfbCountChange: (delta: number) => void;
   onLfbCountChange: (delta: number) => void;
@@ -29,6 +30,7 @@ interface UsePartAGameLogicProps {
  */
 export function usePartAGameLogic({
   phase,
+  level,
   onScoreChange,
   onRfbCountChange,
   onLfbCountChange,
@@ -155,7 +157,7 @@ export function usePartAGameLogic({
         }
 
         // Generate next piece (avoiding same color as the piece that was just placed)
-        const next = generateRandomPiece(activePiece.color);
+        const next = generateRandomPiece(activePiece.color, level);
         setNextPiece(next);
         return next;
       });
@@ -169,6 +171,7 @@ export function usePartAGameLogic({
   }, [
     phase,
     gameStarted,
+    level,
     processLBlockRemoval,
     onPhaseChange,
     onScoreChange,
@@ -181,14 +184,14 @@ export function usePartAGameLogic({
    */
   const startGame = useCallback(() => {
     setGrid(createEmptyGrid());
-    const firstPiece = generateRandomPiece();
+    const firstPiece = generateRandomPiece(undefined, level);
     lastColorRef.current = firstPiece.color;
-    const secondPiece = generateRandomPiece(firstPiece.color);
+    const secondPiece = generateRandomPiece(firstPiece.color, level);
     lastColorRef.current = secondPiece.color;
     setCurrentPiece(firstPiece);
     setNextPiece(secondPiece);
     setGameStarted(true);
-  }, []);
+  }, [level]);
 
   /**
    * Move piece horizontally

@@ -1,9 +1,11 @@
 import { GRID_SIZE } from '@/constants/game';
 import { usePartAGridSize } from '@/hooks/usePartAGridSize';
+import { usePartBCompletionStage } from '@/hooks/usePartBCompletionStage';
 import React, { useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 import { useGameContext } from '../../contexts/GameContext';
 import { gameStyles } from '../../styles/styles';
+import { useResponsive } from '../../hooks/useResponsive';
 import GameInfo from './GameInfo';
 import { DraggingOverlay } from './partB/DraggingOverlay';
 import { GameGrid } from './partB/GameGrid';
@@ -26,6 +28,8 @@ export default function PartBGrid() {
   const game = useGameContext();
   const [hiddenPieceId, setHiddenPieceId] = useState<string | null>(null);
   const [isComplete, setIsComplete] = useState(false);
+  const completionStage = usePartBCompletionStage(isComplete);
+  const { letter } = useResponsive();
 
   // Piece management hook
   const pieces = usePartBPieces({
@@ -104,6 +108,11 @@ export default function PartBGrid() {
   const blockingCellSet = conflict.getBlockingCellSet(pieces.pieces);
   const partAGridWidth = usePartAGridSize();
 
+  // Show overlay for completion stages (same pattern as Part A)
+  const showCompletionOverlay = isComplete && !!completionStage;
+  const showLevelComplete = completionStage === 'levelComplete';
+  const showNiceTurnAround = completionStage === 'niceTurnAround' || completionStage === 'button';
+
   return (
     <View ref={layout.containerRef} onLayout={layout.handleContainerLayout} >
       <GameInfo level={game.level} score={game.score} />
@@ -115,6 +124,7 @@ export default function PartBGrid() {
             // Height should match the diagonal of the rotated grid
             minHeight: partAGridWidth,
             minWidth: partAGridWidth,
+            position: 'relative',
           },
         ]}
         {...dragDrop.boardPanResponder.panHandlers}
@@ -127,6 +137,53 @@ export default function PartBGrid() {
           gridRef={layout.gridRef}
           onLayout={layout.handleGridLayout}
         />
+        
+        {showCompletionOverlay && (
+          <View
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 100,
+            }}
+          >
+            {showLevelComplete && (
+              <Text
+                style={[
+                  gameStyles.message,
+                  gameStyles.failForward,
+                  {
+                    fontSize: letter * 1.2,
+                    fontWeight: 'bold',
+                    textTransform: 'uppercase',
+                  },
+                ]}
+              >
+                Level Complete!
+              </Text>
+            )}
+            {showNiceTurnAround && (
+              <Text
+                style={[
+                  gameStyles.message,
+                  gameStyles.failForward,
+                  {
+                    fontSize: letter * 1.2,
+                    fontWeight: 'bold',
+                    textTransform: 'uppercase',
+                  },
+                ]}
+              >
+                Nice turn around!
+              </Text>
+            )}
+          </View>
+        )}
       </View>
 
       <View style={{ marginTop: 4 }}>
@@ -139,7 +196,10 @@ export default function PartBGrid() {
         />
       </View>
 
-      <PartBControls onRestart={game.handleRestart} showRestart={isComplete} />
+      <PartBControls 
+        onLevelUp={game.handleLevelUp} 
+        showLevelUp={completionStage === 'button'} 
+      />
 
       <DraggingOverlay
         draggingPiece={dragDrop.draggingPiece}

@@ -2,7 +2,8 @@ import { GRID_SIZE, Piece, PIECE_COLORS, PIECE_SHAPES, PieceShape } from '@/cons
 
 // Generate random piece
 // lastColor: optional parameter to prevent consecutive same colors
-export function generateRandomPiece(lastColor?: string): Piece {
+// level: current game level (level 1 = center drop, level 2+ = random drop)
+export function generateRandomPiece(lastColor?: string, level: number = 1): Piece {
   const shapes: PieceShape[] = [
     'I1', 'I2', 'I3', 'I4', 'I5', // I variants
     'O1', 'O2', 'O3', // O variants
@@ -19,11 +20,22 @@ export function generateRandomPiece(lastColor?: string): Piece {
   const colorsToUse = availableColors.length > 0 ? availableColors : PIECE_COLORS;
   const colorIndex = Math.floor(Math.random() * colorsToUse.length);
   
+  // Calculate X position: center for level 1, random for level 2+
+  const pieceWidth = PIECE_SHAPES[shape][0].length;
+  let x: number;
+  if (level === 1) {
+    // Center the piece: (GRID_SIZE - pieceWidth) / 2, rounded down
+    x = Math.floor((GRID_SIZE - pieceWidth) / 2);
+  } else {
+    // Random position for level 2+
+    x = Math.floor(Math.random() * (GRID_SIZE - pieceWidth + 1));
+  }
+  
   return {
     shape,
     color: colorsToUse[colorIndex],
     cells: PIECE_SHAPES[shape],
-    x: Math.floor(GRID_SIZE / 2) - Math.floor(PIECE_SHAPES[shape][0].length / 2),
+    x,
     y: 0,
   };
 }

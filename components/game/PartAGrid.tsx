@@ -1,3 +1,4 @@
+import { usePartAGridSize } from '@/hooks/usePartAGridSize';
 import React, { useCallback } from 'react';
 import { View } from 'react-native';
 import { useGameContext } from '../../contexts/GameContext';
@@ -9,7 +10,6 @@ import PartAGameGrid from './partA/PartAGameGrid';
 import { usePartAGameLogic } from './partA/usePartAGameLogic';
 import { usePartAGestures } from './partA/usePartAGestures';
 import { usePartAKeyboard } from './partA/usePartAKeyboard';
-import { usePartAGridSize } from '@/hooks/usePartAGridSize';
 
 /**
  * Part A Grid Component
@@ -24,6 +24,7 @@ export default function PartAGrid() {
   // Game logic hook - handles piece falling, L-block detection, etc.
   const gameLogic = usePartAGameLogic({
     phase: game.phase,
+    level: game.level,
     onScoreChange: game.updateScore,
     onRfbCountChange: game.updateRfbCount,
     onLfbCountChange: game.updateLfbCount,
