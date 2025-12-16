@@ -9,6 +9,7 @@ import { detectAllWBlocks, getPieceCells } from './wBlockDetection';
 interface UsePartBPiecesProps {
   initialRfbCount: number;
   initialLfbCount: number;
+  level: number;
   onRfbCountChange?: (delta: number) => void;
   onLfbCountChange?: (delta: number) => void;
   onWCountChange?: (delta: number) => void;
@@ -23,6 +24,7 @@ interface UsePartBPiecesProps {
 export function usePartBPieces({
   initialRfbCount,
   initialLfbCount,
+  level,
   onRfbCountChange,
   onLfbCountChange,
   onWCountChange,
@@ -166,7 +168,13 @@ export function usePartBPieces({
           return prev;
         }
 
-        const candidate = { ...prev[index], anchorRow, anchorCol };
+        const piece = prev[index];
+        // For level 2+, W-blocks are locked and cannot be moved
+        if (level >= 2 && piece.isWBlock) {
+          return prev;
+        }
+
+        const candidate = { ...piece, anchorRow, anchorCol };
         const { valid, conflicts, blockingPieceIds } = validatePlacement(candidate, prev, pieceId);
 
         if (!valid) {
@@ -187,7 +195,7 @@ export function usePartBPieces({
 
       return moved;
     },
-    [checkAndScoreWBlock, checkAndUnmarkDestroyedWBlocks]
+    [checkAndScoreWBlock, checkAndUnmarkDestroyedWBlocks, level]
   );
 
   const rotatePiece = useCallback(
@@ -203,6 +211,10 @@ export function usePartBPieces({
         }
 
         const current = prev[index];
+        // For level 2+, W-blocks are locked and cannot be rotated
+        if (level >= 2 && current.isWBlock) {
+          return prev;
+        }
         const rotationIndex = ROTATIONS.indexOf(current.rotation);
         const nextRotation = ROTATIONS[(rotationIndex + 1) % ROTATIONS.length];
         const candidate = { ...current, rotation: nextRotation };
@@ -222,7 +234,7 @@ export function usePartBPieces({
         return result;
       });
     },
-    [checkAndScoreWBlock, checkAndUnmarkDestroyedWBlocks]
+    [checkAndScoreWBlock, checkAndUnmarkDestroyedWBlocks, level]
   );
 
   const removePiece = useCallback(
@@ -234,6 +246,10 @@ export function usePartBPieces({
         }
 
         const piece = prev[index];
+        // For level 2+, W-blocks are locked and cannot be removed
+        if (level >= 2 && piece.isWBlock) {
+          return prev;
+        }
         const updated = prev.filter((p) => p.id !== pieceId);
 
         // Return pieces to available count
@@ -256,7 +272,7 @@ export function usePartBPieces({
         return result;
       });
     },
-    [checkAndScoreWBlock, checkAndUnmarkDestroyedWBlocks, onLfbCountChange, onRfbCountChange]
+    [checkAndScoreWBlock, checkAndUnmarkDestroyedWBlocks, onLfbCountChange, onRfbCountChange, level]
   );
 
   const findPieceAtCell = useCallback(

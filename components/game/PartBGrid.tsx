@@ -35,6 +35,7 @@ export default function PartBGrid() {
   const pieces = usePartBPieces({
     initialRfbCount: game.rfbCount,
     initialLfbCount: game.lfbCount,
+    level: game.level,
     onRfbCountChange: game.updateRfbCount,
     onLfbCountChange: game.updateLfbCount,
     onWCountChange: game.updateWCount,
@@ -42,7 +43,7 @@ export default function PartBGrid() {
   });
 
   // Conflict management hook
-  const conflict = usePartBConflict();
+  const conflict = usePartBConflict({ level: game.level, pieces: pieces.pieces });
 
   // Grid layout hook
   const layout = usePartBGridLayout();
