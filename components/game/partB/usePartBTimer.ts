@@ -45,6 +45,12 @@ export function usePartBTimer({
     }
   }, [isActive, initialTimeSeconds, bonusTimeSeconds]);
 
+  // Timer countdown logic - use ref for onTimeUp to avoid recreating interval
+  const onTimeUpRef = useRef(onTimeUp);
+  useEffect(() => {
+    onTimeUpRef.current = onTimeUp;
+  }, [onTimeUp]);
+
   // Timer countdown logic
   useEffect(() => {
     if (!isActive || hasTimedOut || isPaused) {
@@ -55,11 +61,16 @@ export function usePartBTimer({
       return;
     }
 
+    // Clear any existing interval before creating a new one
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+
     intervalRef.current = setInterval(() => {
       setTimeRemaining((prev) => {
         if (prev <= 1) {
           setHasTimedOut(true);
-          onTimeUp?.();
+          onTimeUpRef.current?.();
           return 0;
         }
         return prev - 1;
@@ -72,7 +83,7 @@ export function usePartBTimer({
         intervalRef.current = null;
       }
     };
-  }, [isActive, hasTimedOut, isPaused, onTimeUp]);
+  }, [isActive, hasTimedOut, isPaused]);
 
   const addBonusTime = useCallback((seconds: number) => {
     setTimeRemaining((prev) => prev + seconds);

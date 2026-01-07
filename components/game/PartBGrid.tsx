@@ -32,16 +32,14 @@ export default function PartBGrid() {
   const [isComplete, setIsComplete] = useState(false);
   const [showTimeUpOverlay, setShowTimeUpOverlay] = useState(false);
   const [timeUpStage, setTimeUpStage] = useState<'time' | 'continue'>('time');
-  const [bonusTimeSeconds, setBonusTimeSeconds] = useState(0);
-  const [lastRewardedWCount, setLastRewardedWCount] = useState(0);
   const completionStage = usePartBCompletionStage(isComplete);
   const { letter } = useResponsive();
 
   // Timer hook - 2 minutes (120 seconds)
   const timer = usePartBTimer({
     isActive: game.isPartBPhase && !isComplete && !showTimeUpOverlay,
-    initialTimeSeconds: 120,
-    bonusTimeSeconds,
+    initialTimeSeconds: 180,
+    bonusTimeSeconds: 0, // No bonus time - timer only decreases
     onTimeUp: () => {
       setShowTimeUpOverlay(true);
       setTimeUpStage('time');
@@ -90,20 +88,6 @@ export default function PartBGrid() {
     setShowTimeUpOverlay(false);
     setTimeUpStage('time');
   };
-
-  // Reward system: add bonus time when W-blocks are formed
-  // Give 30 seconds bonus time for every 3 W-blocks formed
-  React.useEffect(() => {
-    if (game.wCount > 0 && game.wCount >= 3 && game.wCount > lastRewardedWCount) {
-      const rewardThreshold = Math.floor(game.wCount / 3) * 3;
-      if (rewardThreshold > lastRewardedWCount) {
-        const bonusTime = 30; // 30 seconds bonus
-        setBonusTimeSeconds((prev) => prev + bonusTime);
-        timer.addBonusTime(bonusTime);
-        setLastRewardedWCount(rewardThreshold);
-      }
-    }
-  }, [game.wCount, lastRewardedWCount, timer]);
 
   // Drag and drop hook
   const dragDrop = usePartBDragDrop({
@@ -162,16 +146,12 @@ export default function PartBGrid() {
 
   return (
     <View ref={layout.containerRef} onLayout={layout.handleContainerLayout} >
-      <GameInfo level={game.level} score={game.score} />
-      
-      {/* Timer display */}
-      {game.isPartBPhase && !isComplete && (
-        <View style={{ alignItems: 'center', marginBottom: 8 }}>
-          <Text style={[gameStyles.message, { fontSize: letter * 0.9, color: timer.timeRemaining < 60 ? '#FF6B6B' : '#FFFFFF' }]}>
-            Time: {timer.formattedTime}
-          </Text>
-        </View>
-      )}
+      <GameInfo 
+        level={game.level} 
+        score={game.score} 
+        timer={timer}
+        showTimer={game.isPartBPhase && !isComplete}
+      />
 
       <View
         style={[
