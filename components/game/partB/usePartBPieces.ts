@@ -281,6 +281,12 @@ export function usePartBPieces({
     [pieces]
   );
 
+  const resetGrid = useCallback(() => {
+    // Clear all pieces from the grid, but keep the counters
+    // This is used when "Keep going?" is pressed after time runs out
+    setPieces([]);
+  }, []);
+
   return {
     pieces,
     baseGrid,
@@ -291,6 +297,7 @@ export function usePartBPieces({
     rotatePiece,
     removePiece,
     findPieceAtCell,
+    resetGrid,
   };
 }
 

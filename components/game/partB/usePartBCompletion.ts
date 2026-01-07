@@ -12,7 +12,9 @@ interface UsePartBCompletionProps {
 
 /**
  * Hook that checks Part B completion conditions
- * Determines when Part B should end based on available pieces and W-block formation
+ * Level ends when all RFBs and LFBs have been turned into Ws
+ * This means: availableRfbCount === 0 AND availableLfbCount === 0
+ * AND there are no remaining RFB or LFB pieces on the board that aren't part of W-blocks
  */
 export function usePartBCompletion({
   availableRfbCount,
@@ -21,33 +23,15 @@ export function usePartBCompletion({
   onPartBEnd,
 }: UsePartBCompletionProps) {
   useEffect(() => {
-    // If we can still make W-blocks (both counters > 0)
-    if (availableRfbCount > 0 && availableLfbCount > 0) {
-      // Check if there's space to place at least one piece of each type
-      const canPlaceRfb = canPlacePieceType('RFB', pieces);
-      const canPlaceLfb = canPlacePieceType('LFB', pieces);
-
-      // If there's no space to place at least one piece of each type, Part B is complete
-      if (!canPlaceRfb || !canPlaceLfb) {
-        onPartBEnd?.();
-        return;
-      }
-    } else {
-      // If one counter is zero, rely on existing pieces on the board
-      const rfbPieces = pieces.filter((p) => p.type === 'RFB');
-      const lfbPieces = pieces.filter((p) => p.type === 'LFB');
-      const maxPossibleWBlocks = Math.min(rfbPieces.length, lfbPieces.length);
-
-      // If we don't have both piece types on the board, we can't form any more W-blocks
-      if (maxPossibleWBlocks === 0) {
-        onPartBEnd?.();
-        return;
-      }
-
-      const currentWBlocks = detectAllWBlocks(pieces);
-
-      // If we've formed every W-block that is possible with the remaining pieces, Part B is complete
-      if (currentWBlocks.length >= maxPossibleWBlocks) {
+    // Level ends when all RFBs and LFBs have been turned into Ws
+    // Check if both counters are zero
+    if (availableRfbCount === 0 && availableLfbCount === 0) {
+      // Check if there are any RFB or LFB pieces on the board that aren't part of W-blocks
+      const rfbPieces = pieces.filter((p) => p.type === 'RFB' && !p.isWBlock);
+      const lfbPieces = pieces.filter((p) => p.type === 'LFB' && !p.isWBlock);
+      
+      // If there are no remaining RFB or LFB pieces that aren't W-blocks, the level is complete
+      if (rfbPieces.length === 0 && lfbPieces.length === 0) {
         onPartBEnd?.();
         return;
       }
