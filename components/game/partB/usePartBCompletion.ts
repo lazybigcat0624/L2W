@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { canPlacePieceType } from './pieceValidation';
-import { detectAllWBlocks } from './wBlockDetection';
 import type { PieceState } from './types';
 
 interface UsePartBCompletionProps {
@@ -12,9 +11,13 @@ interface UsePartBCompletionProps {
 
 /**
  * Hook that checks Part B completion conditions
- * Level ends when all RFBs and LFBs have been turned into Ws
- * This means: availableRfbCount === 0 AND availableLfbCount === 0
- * AND there are no remaining RFB or LFB pieces on the board that aren't part of W-blocks
+ * Level ends when:
+ * - In case of LFB counter is 0:
+ *   - If there's no LFB on grid to form W block → level ends
+ *   - If there's LFB on grid to form W block:
+ *     - If there's no RFB on counter AND no RFB on grid → level ends
+ *     - If there's RFB on counter but no space to put RFB on grid → level ends
+ * - Same logic for RFB
  */
 export function usePartBCompletion({
   availableRfbCount,
@@ -23,17 +26,61 @@ export function usePartBCompletion({
   onPartBEnd,
 }: UsePartBCompletionProps) {
   useEffect(() => {
-    // Level ends when all RFBs and LFBs have been turned into Ws
-    // Check if both counters are zero
-    if (availableRfbCount === 0 && availableLfbCount === 0) {
-      // Check if there are any RFB or LFB pieces on the board that aren't part of W-blocks
-      const rfbPieces = pieces.filter((p) => p.type === 'RFB' && !p.isWBlock);
-      const lfbPieces = pieces.filter((p) => p.type === 'LFB' && !p.isWBlock);
-      
-      // If there are no remaining RFB or LFB pieces that aren't W-blocks, the level is complete
-      if (rfbPieces.length === 0 && lfbPieces.length === 0) {
+    // Get pieces that are not part of W-blocks (can potentially form W-blocks)
+    const rfbPiecesOnGrid = pieces.filter((p) => p.type === 'RFB' && !p.isWBlock);
+    const lfbPiecesOnGrid = pieces.filter((p) => p.type === 'LFB' && !p.isWBlock);
+
+    // Check LFB completion conditions
+    if (availableLfbCount === 0) {
+      // No LFB in counter box
+      if (lfbPiecesOnGrid.length === 0) {
+        // No LFB on grid to form W block → level ends
         onPartBEnd?.();
         return;
+      } else {
+        // There's LFB on grid that can form W block
+        // Check if there's RFB available
+        const hasRfbOnCounter = availableRfbCount > 0;
+        const hasRfbOnGrid = rfbPiecesOnGrid.length > 0;
+
+        if (!hasRfbOnCounter && !hasRfbOnGrid) {
+          // No RFB on counter AND no RFB on grid → level ends
+          onPartBEnd?.();
+          return;
+        }
+
+        if (hasRfbOnCounter && !canPlacePieceType('RFB', pieces)) {
+          // There's RFB on counter but no space to put RFB on grid → level ends
+          onPartBEnd?.();
+          return;
+        }
+      }
+    }
+
+    // Check RFB completion conditions (same logic as LFB)
+    if (availableRfbCount === 0) {
+      // No RFB in counter box
+      if (rfbPiecesOnGrid.length === 0) {
+        // No RFB on grid to form W block → level ends
+        onPartBEnd?.();
+        return;
+      } else {
+        // There's RFB on grid that can form W block
+        // Check if there's LFB available
+        const hasLfbOnCounter = availableLfbCount > 0;
+        const hasLfbOnGrid = lfbPiecesOnGrid.length > 0;
+
+        if (!hasLfbOnCounter && !hasLfbOnGrid) {
+          // No LFB on counter AND no LFB on grid → level ends
+          onPartBEnd?.();
+          return;
+        }
+
+        if (hasLfbOnCounter && !canPlacePieceType('LFB', pieces)) {
+          // There's LFB on counter but no space to put LFB on grid → level ends
+          onPartBEnd?.();
+          return;
+        }
       }
     }
   }, [availableRfbCount, availableLfbCount, pieces, onPartBEnd]);

@@ -36,7 +36,7 @@ export function usePartBPieces({
   const [availableLfbCount, setAvailableLfbCount] = useState(initialLfbCount);
   const pieceIdCounter = useRef(0);
 
-  const { checkAndScoreWBlock, checkAndUnmarkDestroyedWBlocks } = useWBlockManager({
+  const { checkAndScoreWBlock, checkAndUnmarkDestroyedWBlocks, resetScoredWBlocks } = useWBlockManager({
     onWCountChange,
     onScoreChange,
   });
@@ -283,9 +283,11 @@ export function usePartBPieces({
 
   const resetGrid = useCallback(() => {
     // Clear all pieces from the grid, but keep the counters
-    // This is used when "Keep going?" is pressed after time runs out
+    // This is used when "Start?" is pressed after time runs out
+    // Reset the scored W-blocks set so new W-blocks can be properly tracked
+    resetScoredWBlocks();
     setPieces([]);
-  }, []);
+  }, [resetScoredWBlocks]);
 
   return {
     pieces,

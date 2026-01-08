@@ -108,10 +108,17 @@ export const useWBlockManager = ({ onWCountChange, onScoreChange }: UseWBlockMan
     [onWCountChange, onScoreChange]
   );
 
+  const resetScoredWBlocks = useCallback(() => {
+    // Reset the scored W-blocks set - used when grid is cleared
+    // This prevents old W-block keys from interfering with new W-blocks
+    setScoredWBlocks(new Set());
+  }, []);
+
   return {
     checkAndScoreWBlock,
     checkAndUnmarkDestroyedWBlocks,
     scoredWBlocks,
+    resetScoredWBlocks,
   };
 };
 
