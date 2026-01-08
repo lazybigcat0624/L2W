@@ -1,12 +1,11 @@
 import { GRID_SIZE } from '@/constants/game';
 import { usePartAGridSize } from '@/hooks/usePartAGridSize';
 import { usePartBCompletionStage } from '@/hooks/usePartBCompletionStage';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 import { useGameContext } from '../../contexts/GameContext';
 import { useResponsive } from '../../hooks/useResponsive';
 import { gameStyles } from '../../styles/styles';
-import GameButton from './GameButton';
 import GameInfo from './GameInfo';
 import { DraggingOverlay } from './partB/DraggingOverlay';
 import { GameGrid } from './partB/GameGrid';
@@ -31,7 +30,7 @@ export default function PartBGrid() {
   const [hiddenPieceId, setHiddenPieceId] = useState<string | null>(null);
   const [isComplete, setIsComplete] = useState(false);
   const [showTimeUpOverlay, setShowTimeUpOverlay] = useState(false);
-  const [timeUpStage, setTimeUpStage] = useState<'time' | 'continue'>('time');
+  const [timeUpStage, setTimeUpStage] = useState<'time' | 'continue' | 'button'>('time');
   const completionStage = usePartBCompletionStage(isComplete);
   const { letter } = useResponsive();
 
@@ -43,10 +42,6 @@ export default function PartBGrid() {
     onTimeUp: () => {
       setShowTimeUpOverlay(true);
       setTimeUpStage('time');
-      // Transition from "TIME" to "CONTINUE?" after 1 second
-      setTimeout(() => {
-        setTimeUpStage('continue');
-      }, 1000);
     },
   });
 
@@ -77,6 +72,30 @@ export default function PartBGrid() {
       game.handlePartBEnd();
     },
   });
+
+  // Handle stage transitions when time-up overlay is shown
+  useEffect(() => {
+    if (showTimeUpOverlay) {
+      setTimeUpStage('time');
+      
+      // Transition from "TIME" to "CONTINUE?" after 1 second
+      const timer1 = setTimeout(() => {
+        setTimeUpStage('continue');
+      }, 1000);
+      
+      // Transition to "button" stage after 2 seconds (button appears in controls)
+      const timer2 = setTimeout(() => {
+        setTimeUpStage('button');
+      }, 2000);
+      
+      return () => {
+        clearTimeout(timer1);
+        clearTimeout(timer2);
+      };
+    } else {
+      setTimeUpStage('time');
+    }
+  }, [showTimeUpOverlay]);
 
   // Handle "CONTINUE?" button press
   const handleContinue = () => {
@@ -208,25 +227,21 @@ export default function PartBGrid() {
                 TIME
               </Text>
             )}
-            {timeUpStage === 'continue' && (
-              <>
-                <Text
-                  style={[
-                    gameStyles.message,
-                    gameStyles.failForward,
-                    {
-                      fontSize: letter * 1.2,
-                      fontWeight: 'bold',
-                      textTransform: 'uppercase',
-                      color: '#00FF00', // Green text
-                      marginBottom: 20,
-                    },
-                  ]}
-                >
-                  CONTINUE?
-                </Text>
-                <GameButton title="CONTINUE?" onPress={handleContinue} />
-              </>
+            {(timeUpStage === 'continue' || timeUpStage === 'button') && (
+              <Text
+                style={[
+                  gameStyles.message,
+                  gameStyles.failForward,
+                  {
+                    fontSize: letter * 1.2,
+                    fontWeight: 'bold',
+                    textTransform: 'uppercase',
+                    color: '#00FF00', // Green text
+                  },
+                ]}
+              >
+                CONTINUE?
+              </Text>
             )}
           </View>
         )}
@@ -291,7 +306,9 @@ export default function PartBGrid() {
 
       <PartBControls 
         onLevelUp={game.handleLevelUp} 
-        showLevelUp={completionStage === 'button'} 
+        showLevelUp={completionStage === 'button'}
+        onContinue={handleContinue}
+        showContinue={showTimeUpOverlay && timeUpStage === 'button'}
       />
 
       <DraggingOverlay

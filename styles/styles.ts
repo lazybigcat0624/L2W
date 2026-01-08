@@ -143,6 +143,7 @@ export const gameStyles = StyleSheet.create({
     justifyContent: 'center',
     marginVertical: 6,
     maxWidth: 120,
+    minWidth: 120,
   },
   buttonDisabled: {
     opacity: 0.5,
