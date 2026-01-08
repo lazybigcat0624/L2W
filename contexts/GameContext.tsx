@@ -87,10 +87,10 @@ export function GameProvider({ children }: GameProviderProps) {
   };
 
   const handleLevelUp = () => {
-    // Increment level and reset game state, but keep the new level
+    // Increment level and reset game state, but keep the score and new level
     gameState.setLevel(gameState.level + 1);
     gameState.setPhase('idle');
-    gameState.setScore(0);
+    // Keep the accumulated score across levels
     gameState.setRfbCount(0);
     gameState.setLfbCount(0);
     gameState.setWCount(0);
