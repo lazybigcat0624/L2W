@@ -118,9 +118,10 @@ export default function PartAGameGrid({ grid, currentPiece, phase, transitionSta
   }, [letter, partAGridWidth]);
 
   const overlayFontSizeLong = useMemo(() => {
-    // For longer text like "FAIL FORWARD?" (13 chars), use smaller size
-    const baseSize = letter * 1.0;
-    const maxSizeFromGrid = partAGridWidth / 13;
+    // Match PartBGrid's overlayFontSize calculation for consistency
+    // "FAIL FORWARD?" should match "TIME" and "CONTINUE?" size
+    const baseSize = letter * 1.2;
+    const maxSizeFromGrid = partAGridWidth / 10; // Use same divisor as overlayFontSize for consistency
     return Math.min(baseSize, maxSizeFromGrid);
   }, [letter, partAGridWidth]);
 
@@ -159,7 +160,7 @@ export default function PartAGameGrid({ grid, currentPiece, phase, transitionSta
                 gameStyles.message,
                 gameStyles.fail,
                 {
-                  fontSize: overlayFontSize,
+                  fontSize: overlayFontSize, // Same size as TIME
                   fontWeight: 'bold',
                   textTransform: 'uppercase',
                 },
@@ -174,7 +175,7 @@ export default function PartAGameGrid({ grid, currentPiece, phase, transitionSta
                 gameStyles.message,
                 gameStyles.failForward,
                 {
-                  fontSize: overlayFontSizeLong,
+                  fontSize: overlayFontSize, // Same size as TIME and CONTINUE? for consistency
                   fontWeight: 'bold',
                   textTransform: 'uppercase',
                 },

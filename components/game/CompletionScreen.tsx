@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Text, View } from 'react-native';
 import { useGameContext } from '../../contexts/GameContext';
+import { usePartAGridSize } from '../../hooks/usePartAGridSize';
 import { useResponsive } from '../../hooks/useResponsive';
 import { gameStyles } from '../../styles/styles';
 
@@ -15,6 +16,15 @@ interface CompletionScreenProps {
 export default function CompletionScreen({ score }: CompletionScreenProps) {
   const { letter } = useResponsive();
   const game = useGameContext();
+  const initialGridSize = usePartAGridSize();
+  const partAGridWidth = game.partAGridWidth || initialGridSize;
+
+  // Use same font size calculation as other overlay messages
+  const overlayFontSize = useMemo(() => {
+    const baseSize = letter * 1.2;
+    const maxSizeFromGrid = partAGridWidth / 10;
+    return Math.min(baseSize, maxSizeFromGrid);
+  }, [letter, partAGridWidth]);
 
   return (
     <View
@@ -35,7 +45,7 @@ export default function CompletionScreen({ score }: CompletionScreenProps) {
           gameStyles.message,
           gameStyles.failForward,
           {
-            fontSize: letter * 1.2,
+            fontSize: overlayFontSize, // Same size as TIME, CONTINUE?, FAIL, FAIL FORWARD?
             fontWeight: 'bold',
             textTransform: 'uppercase',
           },
@@ -48,7 +58,7 @@ export default function CompletionScreen({ score }: CompletionScreenProps) {
           gameStyles.message,
           gameStyles.failForward,
           {
-            fontSize: letter * 1.2,
+            fontSize: overlayFontSize, // Same size as TIME, CONTINUE?, FAIL, FAIL FORWARD?
             fontWeight: 'bold',
             textTransform: 'uppercase',
             marginTop: 20,

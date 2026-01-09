@@ -44,18 +44,18 @@ export default function GameHeader() {
               style={{
                 position: 'absolute',
                 left: 0, // Align to left edge of constrained container
-                height: textHeight,
-                width: textHeight, // Keep aspect ratio square
+                height: textHeight, // Make logo bigger to match visual size of text
+                width: textHeight * (1061 / 620), // Maintain original aspect ratio (1061x620)
               }}
               contentFit="contain"
             />
           )}
           <View 
-            style={{ alignItems: 'center' }}
+            style={{ alignItems: 'center', gap: 10 }}
             onLayout={handleTextLayout}
           >
-            <Text style={[gameStyles.title, { fontSize: title }]}>L2W</Text>
-            <Text style={[gameStyles.subtitle, { fontSize: subtitle }]}>Learn to Win</Text>
+            <Text style={[gameStyles.title, { fontSize: title, lineHeight: title }]}>L2W</Text>
+            <Text style={[gameStyles.subtitle, { fontSize: subtitle, lineHeight: subtitle }]}>Learn to Win</Text>
           </View>
         </View>
       </View>

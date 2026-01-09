@@ -258,7 +258,7 @@ export default function PartBGrid() {
                   gameStyles.message,
                   gameStyles.failForward,
                   {
-                    fontSize: overlayFontSizeLong,
+                    fontSize: overlayFontSize, // Use same size as TIME for consistency
                     fontWeight: 'bold',
                     textTransform: 'uppercase',
                     color: '#00FF00', // Green text
@@ -292,7 +292,7 @@ export default function PartBGrid() {
                   gameStyles.message,
                   gameStyles.failForward,
                   {
-                    fontSize: overlayFontSizeLong,
+                    fontSize: overlayFontSize, // Same size as TIME, CONTINUE?, FAIL, FAIL FORWARD?
                     fontWeight: 'bold',
                     textTransform: 'uppercase',
                     color: '#00FF00', // Green text
@@ -308,7 +308,7 @@ export default function PartBGrid() {
                   gameStyles.message,
                   gameStyles.failForward,
                   {
-                    fontSize: overlayFontSizeLong,
+                    fontSize: overlayFontSize, // Same size as TIME, CONTINUE?, FAIL, FAIL FORWARD?
                     fontWeight: 'bold',
                     textTransform: 'uppercase',
                     color: '#00FF00', // Green text
