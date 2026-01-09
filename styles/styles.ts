@@ -1,5 +1,5 @@
-import { StyleSheet } from 'react-native';
 import { GAME_COLORS } from '@/constants/game';
+import { StyleSheet } from 'react-native';
 
 export const gameStyles = StyleSheet.create({
   // L2WGame styles

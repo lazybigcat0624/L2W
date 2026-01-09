@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getPieceCells } from './wBlockDetection';
 import type { ConflictStatePayload, PieceState } from './types';
 
@@ -16,6 +16,18 @@ export function usePartBConflict({ level, pieces }: UsePartBConflictProps) {
   const [conflictCells, setConflictCells] = useState<Array<{ row: number; col: number }>>([]);
   const [conflictPieceId, setConflictPieceId] = useState<string | null>(null);
   const [blockingPieceIds, setBlockingPieceIds] = useState<string[]>([]);
+
+  // Safety: Clear conflict if the conflicted piece no longer exists
+  useEffect(() => {
+    if (conflictPieceId) {
+      const pieceExists = pieces.some((p) => p.id === conflictPieceId);
+      if (!pieceExists) {
+        setConflictCells([]);
+        setConflictPieceId(null);
+        setBlockingPieceIds([]);
+      }
+    }
+  }, [conflictPieceId, pieces]);
 
   const conflictCellSet = useMemo(() => {
     const set = new Set<string>();

@@ -20,12 +20,12 @@ export default function PartBControls({ onLevelUp, showLevelUp, onContinue, show
   return (
     <View style={gameStyles.controlsContainer}>
       {showContinue && onContinue ? (
-        <GameButton title="Start?" onPress={onContinue} />
+        <GameButton title="Start" onPress={onContinue} />
       ) : showLevelUp && onLevelUp ? (
         <GameButton title="LEVEL UP" onPress={onLevelUp} />
       ) : (
         <View style={{ opacity: 0, pointerEvents: 'none' }}>
-          <GameButton title="Start?" onPress={() => {}} />
+          <GameButton title="Start" onPress={() => {}} />
         </View>
       )}
     </View>

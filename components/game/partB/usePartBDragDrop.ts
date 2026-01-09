@@ -147,6 +147,7 @@ export function usePartBDragDrop({
         },
         onPanResponderTerminate: () => {
           updateDraggingPiece(null);
+          onClearConflict(); // Clear conflict state when gesture is terminated
         },
       }),
     [availableLfbCount, availableRfbCount, canInteractWithPiece, handleDrop, updateDraggingPiece]
@@ -276,9 +277,13 @@ export function usePartBDragDrop({
 
               if (success) {
                 onClearConflict();
+              } else {
+                // If drop failed, conflict state was already set, but ensure it's cleared on next interaction
+                // The conflict will be cleared when user tries to interact again
               }
             } else {
               onSetHiddenPieceId(null);
+              onClearConflict(); // Clear conflict if no current drag state
             }
           }
 
@@ -287,6 +292,7 @@ export function usePartBDragDrop({
         onPanResponderTerminate: () => {
           updateDraggingPiece(null);
           onSetHiddenPieceId(null);
+          onClearConflict(); // Clear conflict state when gesture is terminated
           boardInteractionRef.current = null;
         },
       }),

@@ -1,10 +1,10 @@
 {
   "expo": {
     "name": "L2W",
-    "slug": "L2W",
+    "slug": "l2w",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/logo.png",
     "scheme": "l2w",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -13,11 +13,10 @@
     },
     "android": {
       "package": "com.imur.l2w",
+      "versionCode": 11,
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#000000",
+        "foregroundImage": "./assets/images/logo.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
@@ -84,7 +83,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "0d04fb7c-87b5-48b0-82b2-4fb1f18a6a4b"
+        "projectId": "8a625c29-494b-4838-95fa-c48cffa3d6ed"
       }
     }
   }

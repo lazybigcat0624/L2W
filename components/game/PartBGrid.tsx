@@ -40,6 +40,9 @@ export default function PartBGrid() {
     initialTimeSeconds: 180,
     bonusTimeSeconds: 0, // No bonus time - timer only decreases
     onTimeUp: () => {
+      // Clear any active conflict state when timer runs out
+      conflict.clearConflict();
+      setHiddenPieceId(null);
       setShowTimeUpOverlay(true);
       setTimeUpStage('time');
     },
@@ -100,6 +103,8 @@ export default function PartBGrid() {
 
   // Handle "CONTINUE?" button press
   const handleContinue = () => {
+    // Clear any active conflict state before resetting
+    conflict.clearConflict();
     // Reset the grid (clear all pieces) but keep counters - gives users a clear grid
     pieces.resetGrid();
     // Reset the timer first - this will restart the countdown from 2 minutes
@@ -107,6 +112,8 @@ export default function PartBGrid() {
     // Hide the time-up overlay - this will make isActive true and restart the timer
     setShowTimeUpOverlay(false);
     setTimeUpStage('time');
+    // Clear hidden piece state
+    setHiddenPieceId(null);
   };
 
   // Drag and drop hook

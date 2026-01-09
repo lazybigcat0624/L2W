@@ -82,7 +82,7 @@ export default function PartAGrid() {
   }, [game]);
 
   return (
-    <View {...(game.phase === 'partA' ? panResponder.panHandlers : {})} style={{ position: 'relative', minWidth: partAGridWidth, maxWidth: 500, flex: 1 }}>
+    <View {...(game.phase === 'partA' ? panResponder.panHandlers : {})} style={{ position: 'relative', minWidth: partAGridWidth, maxWidth: 5000, flex: 1 }}>
       <GameInfo level={game.level} score={game.score} />
       
       <PartAGameGrid
