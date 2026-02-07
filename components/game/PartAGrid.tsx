@@ -45,8 +45,26 @@ export default function PartAGrid() {
   }, [gameLogic]);
 
   const handleSwipeDown = useCallback(() => {
-    gameLogic.dropPiece();
-  }, [gameLogic]);
+    // For levels 1-2: down swipe moves piece down one step (manual movement)
+    if (game.level <= 2) {
+      gameLogic.movePieceDown();
+    }
+    // For levels 3-4: down swipe moves vertically
+    else if (game.level >= 3 && game.level <= 4) {
+      gameLogic.movePieceVertical('down');
+    }
+    // For levels 5+: down swipe drops piece
+    else {
+      gameLogic.dropPiece();
+    }
+  }, [gameLogic, game.level]);
+
+  const handleSwipeUp = useCallback(() => {
+    // For levels 3-4, up swipe moves vertically
+    if (game.level >= 3 && game.level <= 4) {
+      gameLogic.movePieceVertical('up');
+    }
+  }, [gameLogic, game.level]);
 
   // Gesture hook - handles touch/swipe gestures
   const panResponder = usePartAGestures({
@@ -55,6 +73,7 @@ export default function PartAGrid() {
     onSwipeLeft: handleSwipeLeft,
     onSwipeRight: handleSwipeRight,
     onSwipeDown: handleSwipeDown,
+    onSwipeUp: handleSwipeUp,
   });
 
   // Keyboard hook - handles keyboard input for web
@@ -90,6 +109,7 @@ export default function PartAGrid() {
         currentPiece={gameLogic.currentPiece}
         phase={game.phase}
         transitionStage={transitionStage}
+        level={game.level}
         onGridSizeChange={handleGridSizeChange}
       />
 

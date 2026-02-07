@@ -15,13 +15,14 @@ interface PartAGameGridProps {
   currentPiece: Piece | null;
   phase: GamePhase;
   transitionStage?: TransitionStage;
+  level: number;
   onGridSizeChange?: (size: number) => void;
 }
 
 /**
  * Renders the Part A game grid with cells and transition messages overlay
  */
-export default function PartAGameGrid({ grid, currentPiece, phase, transitionStage, onGridSizeChange }: PartAGameGridProps) {
+export default function PartAGameGrid({ grid, currentPiece, phase, transitionStage, level, onGridSizeChange }: PartAGameGridProps) {
   const { letter } = useResponsive();
   const { width } = useWindowDimensions();
   const initialGridSize = usePartAGridSize();

@@ -3,8 +3,7 @@ import { useCallback, useMemo, useRef } from 'react';
 import {
   GestureResponderEvent,
   PanResponder,
-  PanResponderGestureState,
-  Platform,
+  PanResponderGestureState
 } from 'react-native';
 
 const TAP_THRESHOLD = 10;
@@ -12,7 +11,7 @@ const SWIPE_THRESHOLD = 30;
 const SWIPE_COOLDOWN_MS = 120;
 
 interface SwipeState {
-  direction: 'left' | 'right' | 'down';
+  direction: 'left' | 'right' | 'down' | 'up';
   time: number;
 }
 
@@ -22,6 +21,7 @@ interface UsePartAGesturesProps {
   onSwipeLeft: () => void;
   onSwipeRight: () => void;
   onSwipeDown: () => void;
+  onSwipeUp?: () => void;
 }
 
 /**
@@ -34,6 +34,7 @@ export function usePartAGestures({
   onSwipeLeft,
   onSwipeRight,
   onSwipeDown,
+  onSwipeUp,
 }: UsePartAGesturesProps) {
   const lastSwipeRef = useRef<SwipeState | null>(null);
 
@@ -57,18 +58,25 @@ export function usePartAGestures({
     [onSwipeLeft, onSwipeRight]
   );
 
-  const handleVerticalSwipe = useCallback(() => {
-    const now = Date.now();
-    const canSwipe =
-      !lastSwipeRef.current ||
-      lastSwipeRef.current.direction !== 'down' ||
-      now - lastSwipeRef.current.time > SWIPE_COOLDOWN_MS;
+  const handleVerticalSwipe = useCallback(
+    (direction: 'up' | 'down') => {
+      const now = Date.now();
+      const canSwipe =
+        !lastSwipeRef.current ||
+        lastSwipeRef.current.direction !== direction ||
+        now - lastSwipeRef.current.time > SWIPE_COOLDOWN_MS;
 
-    if (!canSwipe) return;
+      if (!canSwipe) return;
 
-    lastSwipeRef.current = { direction: 'down', time: now };
-    onSwipeDown();
-  }, [onSwipeDown]);
+      lastSwipeRef.current = { direction, time: now };
+      if (direction === 'down') {
+        onSwipeDown();
+      } else if (onSwipeUp) {
+        onSwipeUp();
+      }
+    },
+    [onSwipeDown, onSwipeUp]
+  );
 
   const panResponder = useMemo(
     () =>
@@ -87,9 +95,10 @@ export function usePartAGestures({
             const direction: 'left' | 'right' = dx > 0 ? 'right' : 'left';
             handleHorizontalSwipe(direction);
           }
-          // Vertical swipe (down)
-          else if (absDy > absDx && dy > SWIPE_THRESHOLD) {
-            handleVerticalSwipe();
+          // Vertical swipe (up or down)
+          else if (absDy > absDx && absDy > SWIPE_THRESHOLD) {
+            const direction: 'up' | 'down' = dy > 0 ? 'down' : 'up';
+            handleVerticalSwipe(direction);
           }
         },
         onPanResponderRelease: (evt: GestureResponderEvent, gestureState: PanResponderGestureState) => {
