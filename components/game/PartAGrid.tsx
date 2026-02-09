@@ -60,8 +60,8 @@ export default function PartAGrid() {
   }, [gameLogic, game.level]);
 
   const handleSwipeUp = useCallback(() => {
-    // For levels 3-4, up swipe moves vertically
-    if (game.level >= 3 && game.level <= 4) {
+    // For levels 3-6, up swipe moves vertically
+    if (game.level >= 3 && game.level <= 6) {
       gameLogic.movePieceVertical('up');
     }
   }, [gameLogic, game.level]);
@@ -82,9 +82,21 @@ export default function PartAGrid() {
     gameStarted: gameLogic.gameStarted,
     currentPiece: gameLogic.currentPiece,
     grid: gameLogic.grid,
+    level: game.level,
     onMoveLeft: handleSwipeLeft,
     onMoveRight: handleSwipeRight,
+    onMoveUp: handleSwipeUp,
+    onMoveDown: () => {
+      // For levels 3-6, down arrow should move down vertically
+      if (game.level >= 3 && game.level <= 6) {
+        gameLogic.movePieceVertical('down');
+      }
+    },
     onDrop: handleSwipeDown,
+    onDropLeft: () => gameLogic.dropPieceInDirection('left'),
+    onDropRight: () => gameLogic.dropPieceInDirection('right'),
+    onDropUp: () => gameLogic.dropPieceInDirection('up'),
+    onDropDown: () => gameLogic.dropPieceInDirection('down'),
     onRotate: handleTap,
   });
 

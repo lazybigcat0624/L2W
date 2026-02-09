@@ -1,4 +1,4 @@
-import { GamePhase, L_PATTERNS, Piece, SCORES } from '@/constants/game';
+import { GamePhase, GRID_SIZE, L_PATTERNS, Piece, SCORES } from '@/constants/game';
 import {
   canPlacePiece,
   createEmptyGrid,
@@ -15,7 +15,17 @@ import {
 } from '@/utils/gameLogic';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-const FALL_INTERVAL_MS = 1000;
+// Different falling intervals for different level ranges
+const FALL_INTERVAL_LEVEL_1_2 = 1000; // 1 second for levels 1-2
+const FALL_INTERVAL_LEVEL_3_4 = 1000; // 1 second for levels 3-4 (can be adjusted)
+const FALL_INTERVAL_DEFAULT = 1000; // 1 second for other levels
+
+// Get falling interval based on level
+function getFallInterval(level: number): number {
+  if (level <= 2) return FALL_INTERVAL_LEVEL_1_2;
+  if (level <= 4) return FALL_INTERVAL_LEVEL_3_4;
+  return FALL_INTERVAL_DEFAULT;
+}
 
 interface UsePartAGameLogicProps {
   phase: GamePhase;
@@ -123,15 +133,18 @@ export function usePartAGameLogic({
       return;
     }
 
+    // Get falling interval based on current level
+    const currentLevel = levelRef.current;
+    const fallInterval = getFallInterval(currentLevel);
+    const rotation = getRotationFromLevel(currentLevel);
+
     fallIntervalRef.current = setInterval(() => {
       setCurrentPiece((prev) => {
         const activePiece = prev ?? currentPieceRef.current;
         if (!activePiece) return null;
         const activeGrid = gridRef.current;
 
-        // Get fall direction based on rotation (use ref to ensure current level)
-        const currentLevel = levelRef.current;
-        const rotation = getRotationFromLevel(currentLevel);
+        // Get fall direction based on rotation
         const fallDir = getFallDirection(rotation);
 
         // Try to move piece in fall direction
@@ -186,7 +199,7 @@ export function usePartAGameLogic({
         setNextPiece(next);
         return next;
       });
-    }, FALL_INTERVAL_MS);
+    }, fallInterval);
 
     return () => {
       if (fallIntervalRef.current) {
@@ -324,6 +337,7 @@ export function usePartAGameLogic({
 
   /**
    * Drop piece in fall direction (for levels 3+)
+   * Places the piece on the grid when it can't move further
    */
   const dropPiece = useCallback(() => {
     if (!currentPiece) return;
@@ -341,14 +355,147 @@ export function usePartAGameLogic({
         y: testPiece.y + fallDir.dy 
       };
     }
-    // Move back one step
-    testPiece = { 
+    // Move back one step to final position
+    const finalPiece = { 
       ...testPiece, 
       x: testPiece.x - fallDir.dx, 
       y: testPiece.y - fallDir.dy 
     };
-    setCurrentPiece(testPiece);
-  }, [currentPiece, grid, level]);
+    
+    // Place piece on grid (can't move after dropping)
+    const updatedGrid = placePiece(grid, finalPiece);
+    setGrid(updatedGrid);
+
+    // Process L-block detection and removal
+    const { grid: finalGrid, rfbCount: newRFBs, lfbCount: newLFBs, score: newScore } =
+      processLBlockRemoval(updatedGrid);
+
+    setGrid(finalGrid);
+
+    // Update last color
+    lastColorRef.current = finalPiece.color;
+
+    // Defer callback updates
+    setTimeout(() => {
+      if (newRFBs > 0) {
+        onRfbCountChange(newRFBs);
+      }
+      if (newLFBs > 0) {
+        onLfbCountChange(newLFBs);
+      }
+      if (newScore > 0) {
+        onScoreChange(newScore);
+      }
+
+      // Check if game is over
+      if (isGridFullToTop(finalGrid, rotation)) {
+        onPhaseChange('transitionAB');
+        setGameStarted(false);
+      }
+    }, 0);
+
+    // Check if game is over - stop piece generation
+    if (isGridFullToTop(finalGrid, rotation)) {
+      setCurrentPiece(null);
+      return;
+    }
+
+    // Generate next piece
+    const next = generateRandomPiece(finalPiece.color, level);
+    setNextPiece(next);
+    setCurrentPiece(next);
+  }, [currentPiece, grid, level, processLBlockRemoval, onPhaseChange, onScoreChange, onRfbCountChange, onLfbCountChange]);
+
+  /**
+   * Drop piece in a specific direction (for keyboard controls)
+   * Places the piece on the grid when it can't move further
+   */
+  const dropPieceInDirection = useCallback((direction: 'left' | 'right' | 'up' | 'down') => {
+    if (!currentPiece) return;
+    const rotation = getRotationFromLevel(level);
+    let fallDir: { dx: number; dy: number };
+    
+    switch (direction) {
+      case 'left':
+        fallDir = { dx: -1, dy: 0 };
+        break;
+      case 'right':
+        fallDir = { dx: 1, dy: 0 };
+        break;
+      case 'up':
+        fallDir = { dx: 0, dy: -1 };
+        break;
+      case 'down':
+        fallDir = { dx: 0, dy: 1 };
+        break;
+    }
+    
+    let testPiece = { 
+      ...currentPiece, 
+      x: currentPiece.x + fallDir.dx, 
+      y: currentPiece.y + fallDir.dy 
+    };
+    // Safety limit to prevent infinite loops (max GRID_SIZE steps)
+    let steps = 0;
+    const maxSteps = GRID_SIZE;
+    while (canPlacePiece(grid, testPiece) && steps < maxSteps) {
+      testPiece = { 
+        ...testPiece, 
+        x: testPiece.x + fallDir.dx, 
+        y: testPiece.y + fallDir.dy 
+      };
+      steps++;
+    }
+    // Move back one step to final position
+    const finalPiece = { 
+      ...testPiece, 
+      x: testPiece.x - fallDir.dx, 
+      y: testPiece.y - fallDir.dy 
+    };
+    
+    // Place piece on grid (can't move after dropping)
+    const updatedGrid = placePiece(grid, finalPiece);
+    setGrid(updatedGrid);
+
+    // Process L-block detection and removal
+    const { grid: finalGrid, rfbCount: newRFBs, lfbCount: newLFBs, score: newScore } =
+      processLBlockRemoval(updatedGrid);
+
+    setGrid(finalGrid);
+
+    // Update last color
+    lastColorRef.current = finalPiece.color;
+
+    // Defer callback updates
+    setTimeout(() => {
+      if (newRFBs > 0) {
+        onRfbCountChange(newRFBs);
+      }
+      if (newLFBs > 0) {
+        onLfbCountChange(newLFBs);
+      }
+      if (newScore > 0) {
+        onScoreChange(newScore);
+      }
+
+      // Check if game is over
+      if (isGridFullToTop(finalGrid, rotation)) {
+        onPhaseChange('transitionAB');
+        setGameStarted(false);
+      }
+    }, 0);
+
+    // Check if game is over - stop piece generation
+    if (isGridFullToTop(finalGrid, rotation)) {
+      setCurrentPiece(null);
+      return;
+    }
+
+    // Generate next piece
+    const next = generateRandomPiece(finalPiece.color, level);
+    setNextPiece(next);
+    setCurrentPiece(next);
+  }, [currentPiece, grid, level, processLBlockRemoval, onPhaseChange, onScoreChange, onRfbCountChange, onLfbCountChange]);
 
   /**
    * Rotate piece
@@ -370,6 +517,7 @@ export function usePartAGameLogic({
     movePieceVertical,
     movePieceDown,
     dropPiece,
+    dropPieceInDirection,
     rotateCurrentPiece,
   };
 }

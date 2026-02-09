@@ -3,16 +3,24 @@ import { GRID_SIZE, Piece, PIECE_COLORS, PIECE_SHAPES, PieceShape } from '@/cons
 // Rotation types based on level
 export type RotationType = 0 | 90 | 180 | 270;
 
+// Simple seeded random function for consistent randomness based on level
+function seededRandom(seed: number): number {
+  const x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+}
+
 // Get rotation type from level
 // Level 1-2: 0° (top to bottom)
 // Level 3-4: 90° (right to left)
 // Level 5-6: 270° (left to right)
 // Level 7-8: 180° (down to top)
-// Level 9+: random of 1-8
+// Level 9+: random of 1-8 (deterministic based on level number)
 export function getRotationFromLevel(level: number): RotationType {
-  // Level 9+ uses random rotation
+  // Level 9+ uses random rotation from levels 1-8
+  // Uses seeded random so same level always gets same rotation
   if (level >= 9) {
-    const randomLevel = (level - 9) % 8 + 1;
+    const randomValue = seededRandom(level);
+    const randomLevel = Math.floor(randomValue * 8) + 1; // Random between 1-8
     return getRotationFromLevel(randomLevel);
   }
   
@@ -119,16 +127,15 @@ export function getFallDirection(rotation: RotationType): { dx: number; dy: numb
 }
 
 // Get horizontal movement direction based on rotation
-// For 0° and 180°: left/right stays left/right
-// For 90° and 270°: left/right stays left/right (horizontal movement)
+// For all rotations: left/right stays left/right (normal horizontal movement)
 export function getHorizontalMovement(rotation: RotationType, direction: 'left' | 'right'): { dx: number; dy: number } {
   switch (rotation) {
     case 0: // Top to bottom - left/right stays left/right
       return { dx: direction === 'right' ? 1 : -1, dy: 0 };
     case 90: // Right to left - left/right stays left/right (horizontal)
       return { dx: direction === 'right' ? 1 : -1, dy: 0 };
-    case 180: // Bottom to top - left/right is reversed
-      return { dx: direction === 'right' ? -1 : 1, dy: 0 };
+    case 180: // Bottom to top - left/right stays left/right (normal)
+      return { dx: direction === 'right' ? 1 : -1, dy: 0 };
     case 270: // Left to right - left/right stays left/right (horizontal)
       return { dx: direction === 'right' ? 1 : -1, dy: 0 };
     default:
@@ -201,13 +208,13 @@ export function canPlacePiece(grid: number[][], piece: Piece, dx: number = 0, dy
         const gridX = newX + col;
         const gridY = newY + row;
         
-        // Check bounds
-        if (gridX < 0 || gridX >= GRID_SIZE || gridY >= GRID_SIZE) {
+        // Check bounds (including negative y for upward movement)
+        if (gridX < 0 || gridX >= GRID_SIZE || gridY < 0 || gridY >= GRID_SIZE) {
           return false;
         }
         
         // Check collision with existing blocks
-        if (gridY >= 0 && grid[gridY] && grid[gridY][gridX] !== 0) {
+        if (grid[gridY] && grid[gridY][gridX] !== 0) {
           return false;
         }
       }

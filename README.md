@@ -1,45 +1,138 @@
-# Welcome to your Expo app 👋
+# 🎮 L2W Game - Learn to Win [P-737]
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A cross-platform puzzle game built with React Native and Expo, featuring a unique two-phase gameplay system with dynamic grid rotation mechanics, L-block pattern matching, and progressive difficulty levels.
 
-## Get started
+## 📚 Table of Contents
+- [About](#-about)
+- [Features](#-features)
+- [Gameplay](#-gameplay)
+- [Tech Stack](#-tech-stack)
+- [Installation](#-installation)
+- [Usage](#-usage)
+- [Configuration](#-configuration)
+- [Building & Deployment](#-building--deployment)
+- [Game Mechanics](#-game-mechanics)
+- [Project Structure](#-project-structure)
+- [Contact](#-contact)
 
-1. Install dependencies
+## 🧩 About
 
-   ```bash
-   npm install
-   ```
+L2W (Learn to Win) is an innovative puzzle game that combines falling block mechanics with strategic pattern matching. The game features two distinct phases (Part A and Part B) with unique gameplay mechanics. Part A is a falling block puzzle where players arrange pieces to form L-shaped blocks (RFB and LFB) for points, while Part B introduces a different challenge with drag-and-drop mechanics and W-block formation. The game progressively increases difficulty through 8+ levels, each with unique rotation mechanics that change how blocks fall and move.
 
-2. Start the app
+## ✨ Features
 
-   ```bash
-   npx expo start
-   ```
+- **Two-Phase Gameplay**: Unique Part A (falling blocks) and Part B (drag-and-drop) mechanics
+- **Dynamic Grid Rotation**: 8 levels with different falling directions (top-to-bottom, right-to-left, left-to-right, bottom-to-top)
+- **L-Block Pattern Matching**: Form Right-Facing Blocks (RFB) and Left-Facing Blocks (LFB) for scoring
+- **W-Block Formation**: Advanced pattern matching in Part B
+- **Progressive Difficulty**: 8+ levels with increasing complexity
+- **Manual & Automatic Movement**: Levels 1-2 support manual movement, all levels have automatic falling
+- **Gesture Controls**: Swipe and tap controls for mobile, keyboard support for web
+- **Responsive Design**: Adapts to different screen sizes and orientations
+- **Cross-Platform**: Runs on iOS, Android, and Web
+- **Score Tracking**: Real-time score and block count tracking
+- **Level Progression**: Automatic level advancement system
 
-In the output, you'll find options to open the app in a
+## 🎯 Gameplay
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### Part A - Falling Blocks
+- **Objective**: Arrange falling pieces to form L-shaped blocks
+- **Controls**:
+  - **Swipe Left/Right**: Move piece horizontally (or vertically for levels 3-6)
+  - **Swipe Down**: Drop piece instantly (levels 5+) or move down one step (levels 1-2)
+  - **Swipe Up**: Move piece up (levels 3-4)
+  - **Tap**: Rotate piece 90° clockwise
+- **Scoring**:
+  - **LFB (Left-Facing Block)**: 150 points
+  - **RFB (Right-Facing Block)**: 100 points
+- **Game Over**: When blocks reach the spawn edge
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+### Part B - Drag & Drop
+- **Objective**: Arrange RFB and LFB pieces to form W-blocks
+- **Controls**: Drag and drop pieces onto the grid
+- **Scoring**: W-blocks worth 600 points
+- **Completion**: Form all available pieces into W-blocks
 
-## Get a fresh project
+### Level System
+- **Level 1-2**: Top to bottom falling, center/random spawn
+- **Level 3-4**: Right to left falling, vertical movement controls
+- **Level 5-6**: Left to right falling, vertical movement controls
+- **Level 7-8**: Bottom to top falling, horizontal movement controls
+- **Level 9+**: Random rotation from levels 1-8
 
-When you're ready, run:
+## 🧠 Tech Stack
+
+- **Framework**: Expo ~54.0.23, React Native ^0.81.5
+- **Language**: TypeScript 5.9.2
+- **UI Library**: React 19.1.0
+- **Navigation**: Expo Router ~6.0.14
+- **State Management**: React Context API, Custom Hooks
+- **Gestures**: React Native Gesture Handler ~2.28.0
+- **Animations**: React Native Reanimated ~4.1.1
+- **Storage**: AsyncStorage @react-native-async-storage/async-storage
+- **Platforms**: iOS, Android, Web
+
+## ⚙️ Installation
 
 ```bash
-npm run reset-project
+# Clone the repository
+https://github.com/lazybigcat0624/L2W.git
+
+# Navigate to the project directory
+cd L2W
+
+# Install dependencies
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## 🚀 Usage
 
-## Building the App
+### Development
+
+```bash
+# Start the Expo development server
+npm start
+# or
+npx expo start
+```
+
+Then choose your platform:
+- Press `a` for Android emulator
+- Press `i` for iOS simulator
+- Press `w` for web browser
+- Scan QR code with Expo Go app (mobile)
+
+### Running on Specific Platforms
+
+```bash
+# Android
+npm run android
+
+# iOS
+npm run ios
+
+# Web
+npm run web
+```
+
+## 🧾 Configuration
+
+### Environment Variables
+
+No environment variables are required for basic gameplay. The game uses local state management.
+
+### Game Constants
+
+Game constants can be modified in `constants/game.ts`:
+- `GRID_SIZE`: Grid dimensions (default: 14x14)
+- `FALL_INTERVAL_MS`: Falling speed (default: 1000ms)
+- `SCORES`: Point values for different block types
+- `PIECE_COLORS`: Available piece colors
+- `PIECE_SHAPES`: Available piece shapes
+
+## 🏗️ Building & Deployment
 
 ### Using EAS Build (Recommended)
-
-EAS Build runs in the cloud and avoids local build issues:
 
 ```bash
 # Install EAS CLI
@@ -58,14 +151,7 @@ eas build --profile production --platform ios
 eas build --profile production --platform all
 ```
 
-Build profiles available:
-- `development` - Development build with dev client
-- `preview` - Preview APK for testing
-- `production` - Production APK for release
-
-### Local Builds
-
-For local Android builds:
+### Local Android Builds
 
 ```bash
 # Development build
@@ -81,18 +167,14 @@ npm run build:android:release:arm64
 npm run build:android:universal
 ```
 
-**Note:** If you encounter TLS/SSL errors during local builds, use EAS Build instead.
+### Web Deployment (Vercel)
 
-## Deploying to Vercel (Web)
-
-This project is configured for deployment on Vercel. Follow these steps:
-
-### Option 1: Deploy via Vercel Dashboard (Recommended)
+The project is configured for deployment on Vercel:
 
 1. **Push your code to GitHub/GitLab/Bitbucket**
    ```bash
    git add .
-   git commit -m "Configure Vercel deployment"
+   git commit -m "Deploy to Vercel"
    git push
    ```
 
@@ -103,52 +185,111 @@ This project is configured for deployment on Vercel. Follow these steps:
    - Vercel will automatically detect the configuration from `vercel.json`
    - Click "Deploy"
 
-### Option 2: Deploy via Vercel CLI
-
-1. **Install Vercel CLI**
+3. **Deploy via Vercel CLI**
    ```bash
    npm install -g vercel
-   ```
-
-2. **Deploy**
-   ```bash
-   vercel
-   ```
-   
-   For production deployment:
-   ```bash
    vercel --prod
    ```
 
 ### Build Configuration
 
-The project is configured with:
 - **Build Command**: `npm run build:web`
 - **Output Directory**: `dist`
 - **Framework**: Static export (Expo)
 
-The `vercel.json` file handles routing for client-side navigation with Expo Router.
+## 🎲 Game Mechanics
 
-### Local Web Build
+### Part A Mechanics
 
-To test the web build locally:
-```bash
-npm run build:web
+1. **Piece Spawning**:
+   - Odd levels: Center spawn
+   - Even levels: Random spawn
+   - Spawn position depends on rotation (top/right/bottom/left edge)
+
+2. **Falling System**:
+   - Automatic falling every 1 second for all levels
+   - Manual movement available (levels 1-2: down swipe moves one step)
+
+3. **L-Block Detection**:
+   - Detects 3x3 L-shaped patterns
+   - LFB patterns checked first (higher priority)
+   - Cascading removals possible
+   - Patterns are consistent across all levels
+
+4. **Rotation System**:
+   - Level 1-2: 0° (top to bottom)
+   - Level 3-4: 90° (right to left)
+   - Level 5-6: 270° (left to right)
+   - Level 7-8: 180° (bottom to top)
+
+### Part B Mechanics
+
+1. **Piece Placement**: Drag and drop RFB/LFB pieces onto grid
+2. **W-Block Formation**: Combine RFB and LFB to form W-blocks
+3. **Scoring**: 600 points per W-block
+4. **Completion**: All pieces must be placed as W-blocks
+
+## 📁 Project Structure
+
+```
+L2W/
+├── app/                    # Expo Router pages
+│   ├── _layout.tsx        # Root layout
+│   └── index.tsx          # Home screen
+├── components/
+│   ├── game/              # Game components
+│   │   ├── partA/        # Part A game logic
+│   │   ├── partB/        # Part B game logic
+│   │   └── L2WGame.tsx   # Main game component
+│   └── ui/                # UI components
+├── constants/
+│   ├── game.ts           # Game constants and types
+│   └── theme.ts          # Theme configuration
+├── contexts/
+│   └── GameContext.tsx   # Game state context
+├── hooks/                 # Custom React hooks
+│   ├── useGameState.ts   # Game state management
+│   └── usePartAGridSize.ts
+├── utils/
+│   └── gameLogic.ts      # Core game logic functions
+├── styles/
+│   └── styles.ts         # Style definitions
+└── services/
+    └── googleSheets.ts   # External service integration
 ```
 
-The static files will be generated in the `dist` directory.
+## 🎨 Key Components
 
-## Learn more
+- **L2WGame**: Main game container component
+- **PartAGrid**: Part A falling block game
+- **PartBGrid**: Part B drag-and-drop game
+- **GameContext**: Centralized game state management
+- **usePartAGameLogic**: Part A game logic hook
+- **usePartAGestures**: Gesture handling for Part A
+- **gameLogic.ts**: Core game functions (piece generation, L-block detection, etc.)
 
-To learn more about developing your project with Expo, look at the following resources:
+## 📬 Contact
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [EAS Build documentation](https://docs.expo.dev/build/introduction/): Learn about cloud builds with EAS.
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- **Author**: IMUR
+- **Email**: harukimizuno0222@gmail.com
+- **GitHub**: @lazybigcat0624
+- **Website/Portfolio**: https://harukimizuno.vercel.app
 
-## Join the community
+## 🌟 Acknowledgements
 
-Join our community of developers creating universal apps.
+- [Expo](https://expo.dev/) – React Native framework
+- [React Native](https://reactnative.dev/) – Mobile app framework
+- [Vercel](https://vercel.com/) – Web deployment platform
+- [EAS Build](https://docs.expo.dev/build/introduction/) – Cloud build service
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## 📝 License
+
+This project is private and proprietary.
+
+## 🔄 Version
+
+Current version: 1.0.0
+
+---
+
+**Note**: This game is designed for educational and entertainment purposes. Enjoy playing L2W!
