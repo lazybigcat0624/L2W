@@ -173,6 +173,9 @@ export function usePartAGameLogic({
         const updatedGrid = placePiece(activeGrid, activePiece);
         setGrid(updatedGrid);
 
+        // Immediately clear currentPiece to prevent double rendering
+        setCurrentPiece(null);
+
         // Update last color to the piece that was just placed
         lastColorRef.current = activePiece.color;
 
@@ -206,7 +209,7 @@ export function usePartAGameLogic({
             }
           }, 0);
 
-          // Check if game is over - return null to stop piece generation
+          // Check if game is over - stop piece generation
           if (isGridFullToTop(finalGrid, rotation)) {
             setCurrentPiece(null);
             return;
@@ -317,6 +320,9 @@ export function usePartAGameLogic({
       const updatedGrid = placePiece(grid, currentPiece);
       setGrid(updatedGrid);
 
+      // Immediately clear currentPiece to prevent double rendering
+      setCurrentPiece(null);
+
       // Update last color
       lastColorRef.current = currentPiece.color;
 
@@ -394,6 +400,9 @@ export function usePartAGameLogic({
     // Place piece on grid (can't move after dropping)
     const updatedGrid = placePiece(grid, finalPiece);
     setGrid(updatedGrid);
+
+    // Immediately clear currentPiece to prevent double rendering
+    setCurrentPiece(null);
 
     // Update last color
     lastColorRef.current = finalPiece.color;
@@ -491,6 +500,9 @@ export function usePartAGameLogic({
     // Place piece on grid (can't move after dropping)
     const updatedGrid = placePiece(grid, finalPiece);
     setGrid(updatedGrid);
+
+    // Immediately clear currentPiece to prevent double rendering
+    setCurrentPiece(null);
 
     // Update last color
     lastColorRef.current = finalPiece.color;
